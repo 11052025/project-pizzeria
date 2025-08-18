@@ -3,9 +3,9 @@
 {
   'use strict';
 
-const select = {
-  templateOf: {
-    menuProduct: "#template-menu-product",
+  const select = {
+    templateOf: {
+      menuProduct: "#template-menu-product",
     },
     containerOf: {
       menu: '#product-list',
@@ -52,7 +52,22 @@ const select = {
     menuProduct: Handlebars.compile(document.querySelector(select.templateOf.menuProduct).innerHTML),
   };
 
+  class Product {
+    constructor() {
+      console.log('Tworzę nową instancję klasy Product');
+    }
+  }
+
   const app = {
+    initMenu: function () {
+      const thisApp = this;
+
+      console.log('app.initMenu');
+
+      const testProduct = new Product();
+      console.log('testProduct:', testProduct);
+    },
+
     init: function(){
       const thisApp = this;
       console.log('*** App starting ***');
@@ -60,8 +75,11 @@ const select = {
       console.log('classNames:', classNames);
       console.log('settings:', settings);
       console.log('templates:', templates);
+
+      thisApp.initMenu();
     },
   };
 
   app.init();
 }
+
