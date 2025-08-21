@@ -53,19 +53,32 @@
   };
 
   class Product {
-    constructor() {
-      console.log('Tworzę nową instancję klasy Product');
+    constructor(id, data) {
+      const thisProduct = this;
+
+      thisProduct.id = id;
+      thisProduct.data = data;
+
+      console.log('new Product:', thisProduct);
     }
   }
 
   const app = {
+    initData: function () {
+      const thisApp = this;
+
+      thisApp.data = dataSource;
+    },
+
     initMenu: function () {
       const thisApp = this;
 
       console.log('app.initMenu');
+      console.log('thisApp.data:', thisApp.data);
 
-      const testProduct = new Product();
-      console.log('testProduct:', testProduct);
+      for (let productId in thisApp.data.products) {
+        new Product(productId, thisApp.data.products[productId]);
+      }
     },
 
     init: function(){
@@ -76,10 +89,12 @@
       console.log('settings:', settings);
       console.log('templates:', templates);
 
+      thisApp.initData();
       thisApp.initMenu();
     },
   };
 
   app.init();
 }
+
 
