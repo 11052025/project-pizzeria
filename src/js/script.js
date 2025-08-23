@@ -59,7 +59,7 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // Call render method right after creating instance
+      // render product right after creating an instance
       thisProduct.renderInMenu();
 
       console.log('new Product:', thisProduct);
@@ -71,11 +71,11 @@
       // 1. generate HTML code based on template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // 2. create DOM element from generated HTML and save it as a property of the instance
+      // 2. create DOM element from generated HTML
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // For now, just log the created element to check if it works
-      console.log('thisProduct.element:', thisProduct.element);
+      // 3. find menu container
+      const menuContainer = document.querySelector(select.containerOf.menu);
     }
   }
 
@@ -112,4 +112,5 @@
 
   app.init();
 }
+
 
