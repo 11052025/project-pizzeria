@@ -59,7 +59,7 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // render product right after creating an instance
+      // Render product immediately after creating an instance
       thisProduct.renderInMenu();
 
       console.log('new Product:', thisProduct);
@@ -74,8 +74,11 @@
       // 2. create DOM element from generated HTML
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // 3. find menu container
+      // 3. find menu container on the page
       const menuContainer = document.querySelector(select.containerOf.menu);
+
+      // 4. append newly created element to menu container
+      menuContainer.appendChild(thisProduct.element);
     }
   }
 
@@ -112,5 +115,6 @@
 
   app.init();
 }
+
 
 
