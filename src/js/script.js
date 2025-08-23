@@ -62,6 +62,9 @@
       // Render product immediately after creating an instance
       thisProduct.renderInMenu();
 
+      // Initialize accordion functionality
+      thisProduct.initAccordion();
+
       console.log('new Product:', thisProduct);
     }
 
@@ -80,6 +83,29 @@
       // 4. append newly created element to menu container
       menuContainer.appendChild(thisProduct.element);
     }
+
+    initAccordion() {
+      const thisProduct = this;
+
+      // find clickable element (product header)
+      const clickableTrigger = thisProduct.element.querySelector(select.menuProduct.clickable);
+
+      // add event listener for click
+      clickableTrigger.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        // close other products (remove "active" class)
+        const activeProducts = document.querySelectorAll(select.all.menuProductsActive);
+        for (let activeProduct of activeProducts) {
+          if (activeProduct !== thisProduct.element) {
+            activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
+          }
+        }
+
+        // toggle "active" class on the clicked product
+        thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
+      });
+    }
   }
 
   const app = {
@@ -95,6 +121,7 @@
       console.log('app.initMenu');
       console.log('thisApp.data:', thisApp.data);
 
+      // create new Product instances for all products in data
       for (let productId in thisApp.data.products) {
         new Product(productId, thisApp.data.products[productId]);
       }
@@ -102,6 +129,7 @@
 
     init: function(){
       const thisApp = this;
+
       console.log('*** App starting ***');
       console.log('thisApp:', thisApp);
       console.log('classNames:', classNames);
