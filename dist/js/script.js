@@ -3,9 +3,9 @@
 {
   'use strict';
 
-const select = {
-  templateOf: {
-    menuProduct: "#template-menu-product",
+  const select = {
+    templateOf: {
+      menuProduct: "#template-menu-product",
     },
     containerOf: {
       menu: '#product-list',
@@ -52,7 +52,54 @@ const select = {
     menuProduct: Handlebars.compile(document.querySelector(select.templateOf.menuProduct).innerHTML),
   };
 
+  class Product {
+    constructor(id, data) {
+      const thisProduct = this;
+
+      thisProduct.id = id;
+      thisProduct.data = data;
+
+      // Render product immediately after creating an instance
+      thisProduct.renderInMenu();
+
+      console.log('new Product:', thisProduct);
+    }
+
+    renderInMenu() {
+      const thisProduct = this;
+
+      // 1. generate HTML code based on template
+      const generatedHTML = templates.menuProduct(thisProduct.data);
+
+      // 2. create DOM element from generated HTML
+      thisProduct.element = utils.createDOMFromHTML(generatedHTML);
+
+      // 3. find menu container on the page
+      const menuContainer = document.querySelector(select.containerOf.menu);
+
+      // 4. append newly created element to menu container
+      menuContainer.appendChild(thisProduct.element);
+    }
+  }
+
   const app = {
+    initData: function () {
+      const thisApp = this;
+
+      thisApp.data = dataSource;
+    },
+
+    initMenu: function () {
+      const thisApp = this;
+
+      console.log('app.initMenu');
+      console.log('thisApp.data:', thisApp.data);
+
+      for (let productId in thisApp.data.products) {
+        new Product(productId, thisApp.data.products[productId]);
+      }
+    },
+
     init: function(){
       const thisApp = this;
       console.log('*** App starting ***');
@@ -60,8 +107,14 @@ const select = {
       console.log('classNames:', classNames);
       console.log('settings:', settings);
       console.log('templates:', templates);
+
+      thisApp.initData();
+      thisApp.initMenu();
     },
   };
 
   app.init();
 }
+
+
+
