@@ -61,19 +61,19 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // 1) render product HTML and insert into the DOM
+      // 1) Render product HTML and insert into the DOM
       thisProduct.renderInMenu();
 
-      // 2) cache frequently used DOM elements inside this instance
+      // 2) Cache frequently used DOM elements inside this instance
       thisProduct.getElements();
 
-      // 3) set up accordion behavior
+      // 3) Initialize accordion functionality
       thisProduct.initAccordion();
 
-      // 4) set up order form listeners
+      // 4) Set up event listeners for order form
       thisProduct.initOrderForm();
 
-      // 5) initial processing of order
+      // 5) Initial calculation of product price
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -98,7 +98,7 @@
     getElements() {
       const thisProduct = this;
 
-      // Store references to important DOM nodes inside the product
+      // Cache DOM elements related to this product
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -138,13 +138,13 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // Handle form submit (Enter key)
+      // Handle form submit (Enter key or submit button)
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
-      // Handle any change in form inputs
+      // Handle changes in form inputs
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
@@ -161,27 +161,28 @@
     processOrder() {
       const thisProduct = this;
 
-      // Read form data into a simple JS object
+      // Convert form data into an object
       const formData = utils.serializeFormToObject(thisProduct.form);
       console.log('formData:', formData);
 
-      // Start from the default price
+      // Start from base price
       let price = thisProduct.data.price;
 
-      // Iterate over parameters (like toppings, crust, sauce...)
+      // Iterate over all product parameters
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
+        // Iterate over all options within this parameter
         for (let optionId in param.options) {
           const option = param.options[optionId];
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
           if (optionSelected && !option.default) {
-            // If selected but not default → add price
+            // If option is selected but not default → add price
             price += option.price;
           } else if (!optionSelected && option.default) {
-            // If not selected but default → subtract price
+            // If option is not selected but default → subtract price
             price -= option.price;
           }
         }
@@ -204,6 +205,7 @@
       console.log('app.initMenu');
       console.log('thisApp.data:', thisApp.data);
 
+      // Create new product instances for each product in the data source
       for (let productId in thisApp.data.products) {
         new Product(productId, thisApp.data.products[productId]);
       }
@@ -224,6 +226,7 @@
 
   app.init();
 }
+
 
 
 
