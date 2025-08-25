@@ -70,10 +70,10 @@
       // 3) set up accordion behavior
       thisProduct.initAccordion();
 
-      // 4) set up order form listeners (skeleton for now)
+      // 4) set up order form listeners
       thisProduct.initOrderForm();
 
-      // 5) compute price / react to options (skeleton for now)
+      // 5) initial processing of order
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -82,16 +82,16 @@
     renderInMenu() {
       const thisProduct = this;
 
-      // 1. generate HTML code based on template
+      // Generate HTML code based on template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // 2. create DOM element from generated HTML
+      // Create DOM element from generated HTML
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // 3. find menu container on the page
+      // Find menu container on the page
       const menuContainer = document.querySelector(select.containerOf.menu);
 
-      // 4. append newly created element to menu container
+      // Append newly created element to menu container
       menuContainer.appendChild(thisProduct.element);
     }
 
@@ -138,17 +138,31 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // For now: just a debug log to confirm method is called per product
-      console.log('initOrderForm for:', thisProduct.id);
-      // (Next steps will add event listeners for form changes & submit)
+      // Handle form submit (Enter key)
+      thisProduct.form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
+
+      // Handle any change in form inputs
+      for (let input of thisProduct.formInputs) {
+        input.addEventListener('change', function () {
+          thisProduct.processOrder();
+        });
+      }
+
+      // Handle "Add to cart" button click
+      thisProduct.cartButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
     }
 
     processOrder() {
       const thisProduct = this;
 
-      // For now: just a debug log to confirm method is called per product
+      // Debug log for now (will compute price later)
       console.log('processOrder for:', thisProduct.id);
-      // (Next steps will compute price based on selected options)
     }
   }
 
@@ -184,6 +198,7 @@
 
   app.init();
 }
+
 
 
 
