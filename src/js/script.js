@@ -161,38 +161,34 @@
     processOrder() {
       const thisProduct = this;
 
-      // Start with base price
+      // Read form data into a simple JS object
+      const formData = utils.serializeFormToObject(thisProduct.form);
+      console.log('formData:', formData);
+
+      // Start from the default price
       let price = thisProduct.data.price;
 
-      // Get data from form
-      const formData = utils.serializeFormToObject(thisProduct.form);
-
-      // Iterate over all product parameters
+      // Iterate over parameters (like toppings, crust, sauce...)
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Iterate over each option within the parameter
         for (let optionId in param.options) {
           const option = param.options[optionId];
-
-          // Check if this option is selected in the form
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
           if (optionSelected && !option.default) {
-            // Add price for selected non-default option
+            // If selected but not default → add price
             price += option.price;
           } else if (!optionSelected && option.default) {
-            // Subtract price if default option is not selected
+            // If not selected but default → subtract price
             price -= option.price;
           }
         }
       }
 
-      // Update calculated price in DOM
+      // Update price in the DOM
       thisProduct.priceElem.innerHTML = price;
-
-      console.log('processOrder -> final price:', price);
     }
   }
 
@@ -228,6 +224,7 @@
 
   app.init();
 }
+
 
 
 
