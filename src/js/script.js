@@ -161,8 +161,38 @@
     processOrder() {
       const thisProduct = this;
 
-      // Debug log for now (will compute price later)
-      console.log('processOrder for:', thisProduct.id);
+      // Start with base price
+      let price = thisProduct.data.price;
+
+      // Get data from form
+      const formData = utils.serializeFormToObject(thisProduct.form);
+
+      // Iterate over all product parameters
+      for (let paramId in thisProduct.data.params) {
+        const param = thisProduct.data.params[paramId];
+
+        // Iterate over each option within the parameter
+        for (let optionId in param.options) {
+          const option = param.options[optionId];
+
+          // Check if this option is selected in the form
+          const optionSelected =
+            formData[paramId] && formData[paramId].includes(optionId);
+
+          if (optionSelected && !option.default) {
+            // Add price for selected non-default option
+            price += option.price;
+          } else if (!optionSelected && option.default) {
+            // Subtract price if default option is not selected
+            price -= option.price;
+          }
+        }
+      }
+
+      // Update calculated price in DOM
+      thisProduct.priceElem.innerHTML = price;
+
+      console.log('processOrder -> final price:', price);
     }
   }
 
@@ -198,6 +228,7 @@
 
   app.init();
 }
+
 
 
 
