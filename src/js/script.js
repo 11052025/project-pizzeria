@@ -61,19 +61,19 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // 1) Render product HTML and insert into the DOM
+      // 1) Render product in menu
       thisProduct.renderInMenu();
 
-      // 2) Cache frequently used DOM elements inside this instance
+      // 2) Get references to DOM elements
       thisProduct.getElements();
 
-      // 3) Initialize accordion functionality
+      // 3) Initialize accordion
       thisProduct.initAccordion();
 
-      // 4) Set up event listeners for order form
+      // 4) Set listeners on form
       thisProduct.initOrderForm();
 
-      // 5) Initial calculation of product price
+      // 5) Calculate initial price
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -82,23 +82,21 @@
     renderInMenu() {
       const thisProduct = this;
 
-      // Generate HTML code based on template
+      // Generate HTML using Handlebars template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // Create DOM element from generated HTML
+      // Create DOM element
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // Find menu container on the page
+      // Find menu container and append product element
       const menuContainer = document.querySelector(select.containerOf.menu);
-
-      // Append newly created element to menu container
       menuContainer.appendChild(thisProduct.element);
     }
 
     getElements() {
       const thisProduct = this;
 
-      // Cache DOM elements related to this product
+      // References to important DOM elements inside product
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -114,21 +112,19 @@
     initAccordion() {
       const thisProduct = this;
 
-      // Listen for clicks on the product header
+      // Add listener to product header
       thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
 
-        // Find currently active product (if any)
+        // Close other active product
         const activeProduct = document.querySelector(
           select.all.menuProductsActive
         );
-
-        // If there is an active product and it's not this one, close it
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
 
-        // Toggle this product
+        // Toggle current product
         thisProduct.element.classList.toggle(
           classNames.menuProduct.wrapperActive
         );
@@ -138,20 +134,20 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // Handle form submit (Enter key or submit button)
+      // Submit form
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
-      // Handle changes in form inputs
+      // Change any input
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
         });
       }
 
-      // Handle "Add to cart" button click
+      // Add to cart button
       thisProduct.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
@@ -161,34 +157,38 @@
     processOrder() {
       const thisProduct = this;
 
-      // Convert form data into an object
+      // 1) Serialize form data to object
       const formData = utils.serializeFormToObject(thisProduct.form);
       console.log('formData:', formData);
 
-      // Start from base price
+      // 2) Start with base price
       let price = thisProduct.data.price;
 
-      // Iterate over all product parameters
+      // 3) Loop through all params in product
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Iterate over all options within this parameter
+        // 4) Loop through all options of param
         for (let optionId in param.options) {
           const option = param.options[optionId];
+
+          // 5) Check if option is selected in form
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
+          // 6) If option is selected and not default -> add price
           if (optionSelected && !option.default) {
-            // If option is selected but not default → add price
             price += option.price;
+
+          // 7) If option is not selected and is default -> subtract price
           } else if (!optionSelected && option.default) {
-            // If option is not selected but default → subtract price
             price -= option.price;
           }
+          // Otherwise, do nothing
         }
       }
 
-      // Update price in the DOM
+      // 8) Update price in DOM (next to Add to Cart button)
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -205,7 +205,6 @@
       console.log('app.initMenu');
       console.log('thisApp.data:', thisApp.data);
 
-      // Create new product instances for each product in the data source
       for (let productId in thisApp.data.products) {
         new Product(productId, thisApp.data.products[productId]);
       }
@@ -226,6 +225,7 @@
 
   app.init();
 }
+
 
 
 
