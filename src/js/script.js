@@ -73,7 +73,7 @@
       // 4) Set listeners on form
       thisProduct.initOrderForm();
 
-      // 5) Calculate initial price (and set initial images visibility)
+      // 5) Calculate initial price and set initial images visibility
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -107,8 +107,10 @@
         thisProduct.element.querySelector(select.menuProduct.cartButton);
       thisProduct.priceElem =
         thisProduct.element.querySelector(select.menuProduct.priceElem);
+
+      // Wrapper that contains ingredient images for this product
       thisProduct.imageWrapper =
-        thisProduct.element.querySelector(select.menuProduct.imageWrapper); // wrapper that contains ingredient images
+        thisProduct.element.querySelector(select.menuProduct.imageWrapper);
     }
 
     initAccordion() {
@@ -189,12 +191,12 @@
           // Images have classes like ".toppings-olives", ".sauce-tomato"
           if (thisProduct.imageWrapper) {
             const imageSelector = '.' + paramId + '-' + optionId;
-            const image = thisProduct.imageWrapper.querySelector(imageSelector);
-            if (image) {
+            const optionImage = thisProduct.imageWrapper.querySelector(imageSelector);
+            if (optionImage) {
               if (optionSelected) {
-                image.classList.add(classNames.menuProduct.imageVisible);
+                optionImage.classList.add(classNames.menuProduct.imageVisible);
               } else {
-                image.classList.remove(classNames.menuProduct.imageVisible);
+                optionImage.classList.remove(classNames.menuProduct.imageVisible);
               }
             }
           }
@@ -238,6 +240,7 @@
 
   app.init();
 }
+
 
 
 
