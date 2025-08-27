@@ -5,7 +5,7 @@
 
   const select = {
     templateOf: {
-      menuProduct: "#template-menu-product",
+      menuProduct: '#template-menu-product',
     },
     containerOf: {
       menu: '#product-list',
@@ -36,7 +36,7 @@
   const classNames = {
     menuProduct: {
       wrapperActive: 'active',
-      imageVisible: 'active',
+      imageVisible: 'active', // class used to show an ingredient image
     },
   };
 
@@ -45,11 +45,13 @@
       defaultValue: 1,
       defaultMin: 0,
       defaultMax: 10,
-    }
+    },
   };
 
   const templates = {
-    menuProduct: Handlebars.compile(document.querySelector(select.templateOf.menuProduct).innerHTML),
+    menuProduct: Handlebars.compile(
+      document.querySelector(select.templateOf.menuProduct).innerHTML
+    ),
   };
 
   class Product {
@@ -59,11 +61,20 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // render product immediately after creating an instance
+      // 1) Render product in menu
       thisProduct.renderInMenu();
 
-      // initialize accordion functionality
+      // 2) Get references to DOM elements
+      thisProduct.getElements();
+
+      // 3) Initialize accordion
       thisProduct.initAccordion();
+
+      // 4) Set listeners on form
+      thisProduct.initOrderForm();
+
+      // 5) Calculate initial price (and set initial images visibility)
+      thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
     }
@@ -71,48 +82,133 @@
     renderInMenu() {
       const thisProduct = this;
 
-      // 1. generate HTML code based on template
+      // Generate HTML using Handlebars template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // 2. create DOM element from generated HTML
+      // Create DOM element
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // 3. find menu container on the page
+      // Find menu container and append product element
       const menuContainer = document.querySelector(select.containerOf.menu);
-
-      // 4. append newly created element to menu container
       menuContainer.appendChild(thisProduct.element);
+    }
+
+    getElements() {
+      const thisProduct = this;
+
+      // References to important DOM elements inside product
+      thisProduct.accordionTrigger =
+        thisProduct.element.querySelector(select.menuProduct.clickable);
+      thisProduct.form =
+        thisProduct.element.querySelector(select.menuProduct.form);
+      thisProduct.formInputs =
+        thisProduct.form.querySelectorAll(select.all.formInputs);
+      thisProduct.cartButton =
+        thisProduct.element.querySelector(select.menuProduct.cartButton);
+      thisProduct.priceElem =
+        thisProduct.element.querySelector(select.menuProduct.priceElem);
+      thisProduct.imageWrapper =
+        thisProduct.element.querySelector(select.menuProduct.imageWrapper); // wrapper that contains ingredient images
     }
 
     initAccordion() {
       const thisProduct = this;
 
-      // find the clickable trigger (the element that should react to clicking)
-      const clickableTrigger = thisProduct.element.querySelector(select.menuProduct.clickable);
-
-      // add event listener to clickable trigger on event click
-      clickableTrigger.addEventListener('click', function (event) {
-        // prevent default action for event
+      // Add listener to product header
+      thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
 
-        // find active product (product that has active class)
-        const activeProduct = document.querySelector(select.all.menuProductsActive);
-
-        // if there is active product and it's not thisProduct.element, remove class active from it
+        // Close other active product
+        const activeProduct = document.querySelector(
+          select.all.menuProductsActive
+        );
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
 
-        // toggle active class on thisProduct.element
-        thisProduct.element.classList.toggle(classNames.menuProduct.wrapperActive);
+        // Toggle current product
+        thisProduct.element.classList.toggle(
+          classNames.menuProduct.wrapperActive
+        );
       });
+    }
+
+    initOrderForm() {
+      const thisProduct = this;
+
+      // Submit form
+      thisProduct.form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
+
+      // Change any input
+      for (let input of thisProduct.formInputs) {
+        input.addEventListener('change', function () {
+          thisProduct.processOrder();
+        });
+      }
+
+      // Add to cart button
+      thisProduct.cartButton.addEventListener('click', function (event) {
+        event.preventDefault();
+        thisProduct.processOrder();
+      });
+    }
+
+    processOrder() {
+      const thisProduct = this;
+
+      // 1) Serialize form data to object
+      const formData = utils.serializeFormToObject(thisProduct.form);
+      console.log('formData:', formData);
+
+      // 2) Start with base price
+      let price = thisProduct.data.price;
+
+      // 3) Loop through all params in product
+      for (let paramId in thisProduct.data.params) {
+        const param = thisProduct.data.params[paramId];
+
+        // 4) Loop through all options of param
+        for (let optionId in param.options) {
+          const option = param.options[optionId];
+
+          // 5) Check if option is selected in form
+          const optionSelected =
+            formData[paramId] && formData[paramId].includes(optionId);
+
+          // 6) Price adjustments
+          if (optionSelected && !option.default) {
+            price += option.price;
+          } else if (!optionSelected && option.default) {
+            price -= option.price;
+          }
+
+          // 7) Toggle matching ingredient image visibility
+          // Images have classes like ".toppings-olives", ".sauce-tomato"
+          if (thisProduct.imageWrapper) {
+            const imageSelector = '.' + paramId + '-' + optionId;
+            const image = thisProduct.imageWrapper.querySelector(imageSelector);
+            if (image) {
+              if (optionSelected) {
+                image.classList.add(classNames.menuProduct.imageVisible);
+              } else {
+                image.classList.remove(classNames.menuProduct.imageVisible);
+              }
+            }
+          }
+        }
+      }
+
+      // 8) Update price in DOM (next to Add to Cart button)
+      thisProduct.priceElem.innerHTML = price;
     }
   }
 
   const app = {
     initData: function () {
       const thisApp = this;
-
       thisApp.data = dataSource;
     },
 
@@ -142,6 +238,17 @@
 
   app.init();
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
