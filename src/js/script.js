@@ -36,7 +36,7 @@
   const classNames = {
     menuProduct: {
       wrapperActive: 'active',
-      imageVisible: 'active',
+      imageVisible: 'active', // used to show/hide ingredient images
     },
   };
 
@@ -73,7 +73,7 @@
       // 4) Set listeners on form
       thisProduct.initOrderForm();
 
-      // 5) Calculate initial price
+      // 5) Calculate initial price and set initial images visibility
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -107,6 +107,8 @@
         thisProduct.element.querySelector(select.menuProduct.cartButton);
       thisProduct.priceElem =
         thisProduct.element.querySelector(select.menuProduct.priceElem);
+      thisProduct.imageWrapper =
+        thisProduct.element.querySelector(select.menuProduct.imageWrapper); // wrapper with ingredient images
     }
 
     initAccordion() {
@@ -176,15 +178,28 @@
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          // 6) If option is selected and not default -> add price
+          // 6) Price adjustments
           if (optionSelected && !option.default) {
+            // selected & not default -> add price
             price += option.price;
-
-          // 7) If option is not selected and is default -> subtract price
           } else if (!optionSelected && option.default) {
+            // not selected & default -> subtract price
             price -= option.price;
           }
-          // Otherwise, do nothing
+
+          // 7) Toggle corresponding ingredient image visibility
+          //    Images use classes like ".toppings-olives", ".sauce-tomato"
+          const imageSelector = '.' + paramId + '-' + optionId;
+          if (thisProduct.imageWrapper) {
+            const image = thisProduct.imageWrapper.querySelector(imageSelector);
+            if (image) {
+              if (optionSelected) {
+                image.classList.add(classNames.menuProduct.imageVisible);
+              } else {
+                image.classList.remove(classNames.menuProduct.imageVisible);
+              }
+            }
+          }
         }
       }
 
@@ -225,6 +240,7 @@
 
   app.init();
 }
+
 
 
 
