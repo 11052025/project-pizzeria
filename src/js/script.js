@@ -20,7 +20,7 @@
       clickable: '.product__header',
       form: '.product__order',
       priceElem: '.product__total-price .price',
-      imageWrapper: '.product__images', // <--- tu mamy selektor dla obrazków
+      imageWrapper: '.product__images',
       amountWidget: '.widget-amount',
       cartButton: '[href="#add-to-cart"]',
     },
@@ -36,7 +36,7 @@
   const classNames = {
     menuProduct: {
       wrapperActive: 'active',
-      imageVisible: 'active',
+      imageVisible: 'active', // class used to show an ingredient image
     },
   };
 
@@ -61,19 +61,19 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // 1) render product HTML and insert into the DOM
+      // 1) Render product in menu
       thisProduct.renderInMenu();
 
-      // 2) cache frequently used DOM elements inside this instance
+      // 2) Get references to DOM elements
       thisProduct.getElements();
 
-      // 3) set up accordion behavior
+      // 3) Initialize accordion
       thisProduct.initAccordion();
 
-      // 4) set up order form listeners
+      // 4) Set listeners on form
       thisProduct.initOrderForm();
 
-      // 5) initial processing of order
+      // 5) Calculate initial price (and set initial images visibility)
       thisProduct.processOrder();
 
       console.log('new Product:', thisProduct);
@@ -82,23 +82,21 @@
     renderInMenu() {
       const thisProduct = this;
 
-      // Generate HTML code based on template
+      // Generate HTML using Handlebars template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // Create DOM element from generated HTML
+      // Create DOM element
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // Find menu container on the page
+      // Find menu container and append product element
       const menuContainer = document.querySelector(select.containerOf.menu);
-
-      // Append newly created element to menu container
       menuContainer.appendChild(thisProduct.element);
     }
 
     getElements() {
       const thisProduct = this;
 
-      // Store references to important DOM nodes inside the product
+      // References to important DOM elements inside product
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -110,27 +108,25 @@
       thisProduct.priceElem =
         thisProduct.element.querySelector(select.menuProduct.priceElem);
       thisProduct.imageWrapper =
-        thisProduct.element.querySelector(select.menuProduct.imageWrapper); // <--- DODANE
+        thisProduct.element.querySelector(select.menuProduct.imageWrapper); // wrapper that contains ingredient images
     }
 
     initAccordion() {
       const thisProduct = this;
 
-      // Listen for clicks on the product header
+      // Add listener to product header
       thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
 
-        // Find currently active product (if any)
+        // Close other active product
         const activeProduct = document.querySelector(
           select.all.menuProductsActive
         );
-
-        // If there is an active product and it's not this one, close it
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
 
-        // Toggle this product
+        // Toggle current product
         thisProduct.element.classList.toggle(
           classNames.menuProduct.wrapperActive
         );
@@ -140,20 +136,20 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // Handle form submit (Enter key)
+      // Submit form
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
-      // Handle any change in form inputs
+      // Change any input
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
         });
       }
 
-      // Handle "Add to cart" button click
+      // Add to cart button
       thisProduct.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
@@ -163,34 +159,49 @@
     processOrder() {
       const thisProduct = this;
 
-      // Convert form data into an object
+      // 1) Serialize form data to object
       const formData = utils.serializeFormToObject(thisProduct.form);
       console.log('formData:', formData);
 
-      // Start from base price
+      // 2) Start with base price
       let price = thisProduct.data.price;
 
-      // Iterate over all product parameters
+      // 3) Loop through all params in product
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Iterate over options within each parameter
+        // 4) Loop through all options of param
         for (let optionId in param.options) {
           const option = param.options[optionId];
+
+          // 5) Check if option is selected in form
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
+          // 6) Price adjustments
           if (optionSelected && !option.default) {
-            // If selected but not default → add price
             price += option.price;
           } else if (!optionSelected && option.default) {
-            // If not selected but default → subtract price
             price -= option.price;
+          }
+
+          // 7) Toggle matching ingredient image visibility
+          // Images have classes like ".toppings-olives", ".sauce-tomato"
+          if (thisProduct.imageWrapper) {
+            const imageSelector = '.' + paramId + '-' + optionId;
+            const image = thisProduct.imageWrapper.querySelector(imageSelector);
+            if (image) {
+              if (optionSelected) {
+                image.classList.add(classNames.menuProduct.imageVisible);
+              } else {
+                image.classList.remove(classNames.menuProduct.imageVisible);
+              }
+            }
           }
         }
       }
 
-      // Update price in the DOM
+      // 8) Update price in DOM (next to Add to Cart button)
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -227,6 +238,7 @@
 
   app.init();
 }
+
 
 
 
