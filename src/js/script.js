@@ -61,18 +61,35 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
+      // 1) render product and insert into DOM
       thisProduct.renderInMenu();
+
+      // 2) cache frequently used DOM elements
       thisProduct.getElements();
+
+      // 3) set up accordion behavior
       thisProduct.initAccordion();
+
+      // 4) set up order form listeners
       thisProduct.initOrderForm();
-      thisProduct.initAmountWidget(); // initialize AmountWidget
+
+      // 5) init amount widget
+      thisProduct.initAmountWidget();
+
+      // 6) initial price calculation
       thisProduct.processOrder();
     }
 
     renderInMenu() {
       const thisProduct = this;
+
+      // Generate HTML based on Handlebars template
       const generatedHTML = templates.menuProduct(thisProduct.data);
+
+      // Create DOM element from HTML
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
+
+      // Append to menu container
       const menuContainer = document.querySelector(select.containerOf.menu);
       menuContainer.appendChild(thisProduct.element);
     }
@@ -80,6 +97,7 @@
     getElements() {
       const thisProduct = this;
 
+      // Cache nodes inside product
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -99,14 +117,18 @@
     initAccordion() {
       const thisProduct = this;
 
+      // Toggle current product; close previously opened one
       thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
+
         const activeProduct = document.querySelector(
           select.all.menuProductsActive
         );
+
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
+
         thisProduct.element.classList.toggle(
           classNames.menuProduct.wrapperActive
         );
@@ -116,17 +138,20 @@
     initOrderForm() {
       const thisProduct = this;
 
+      // Recalculate on submit (prevent form navigation)
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
+      // Recalculate on any input change
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
         });
       }
 
+      // Recalculate on "Add to cart" click (later will also add to cart)
       thisProduct.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
@@ -140,28 +165,35 @@
 
     processOrder() {
       const thisProduct = this;
+
+      // Read form into plain object, e.g. { sauce: ['tomato'], toppings: ['olives'] }
       const formData = utils.serializeFormToObject(thisProduct.form);
 
+      // Start from base price
       let price = thisProduct.data.price;
 
+      // Iterate over params and options
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
         for (let optionId in param.options) {
           const option = param.options[optionId];
+
+          // Is this option selected in the form?
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
+          // Adjust price vs default
           if (optionSelected && !option.default) {
             price += option.price;
           } else if (!optionSelected && option.default) {
             price -= option.price;
           }
 
+          // Toggle ingredient image visibility (if exists)
           const optionImage = thisProduct.imageWrapper.querySelector(
             '.' + paramId + '-' + optionId
           );
-
           if (optionImage) {
             if (optionSelected) {
               optionImage.classList.add(classNames.menuProduct.imageVisible);
@@ -172,6 +204,7 @@
         }
       }
 
+      // Update visible price (base price only; amount multiplication comes later)
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -180,9 +213,14 @@
     constructor(element) {
       const thisWidget = this;
 
+      // Grab DOM elements
       thisWidget.getElements(element);
-      thisWidget.setValue(thisWidget.input.value); // set initial value
-      thisWidget.initActions(); // set up listeners
+
+      // Initialize internal value from input
+      thisWidget.setValue(thisWidget.input.value);
+
+      // Set up listeners
+      thisWidget.initActions();
     }
 
     getElements(element) {
@@ -199,9 +237,10 @@
 
     setValue(value) {
       const thisWidget = this;
+
       const newValue = parseInt(value);
 
-      // Validation: check if value is a number, different from current, and within range
+      // Accept only different, numeric, and in-range values
       if (
         thisWidget.value !== newValue &&
         !isNaN(newValue) &&
@@ -211,25 +250,25 @@
         thisWidget.value = newValue;
       }
 
-      // Update input field with current value
+      // Reflect current value in the input
       thisWidget.input.value = thisWidget.value;
     }
 
     initActions() {
       const thisWidget = this;
 
-      // React to manual input change
+      // Manual input change
       thisWidget.input.addEventListener('change', function () {
         thisWidget.setValue(thisWidget.input.value);
       });
 
-      // React to clicking "decrease"
+      // Decrease button
       thisWidget.linkDecrease.addEventListener('click', function (event) {
         event.preventDefault();
         thisWidget.setValue(thisWidget.value - 1);
       });
 
-      // React to clicking "increase"
+      // Increase button
       thisWidget.linkIncrease.addEventListener('click', function (event) {
         event.preventDefault();
         thisWidget.setValue(thisWidget.value + 1);
@@ -260,6 +299,7 @@
 
   app.init();
 }
+
 
 
 
