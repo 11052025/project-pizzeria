@@ -61,45 +61,25 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // 1) render product and insert it into DOM
       thisProduct.renderInMenu();
-
-      // 2) store frequently used DOM elements
       thisProduct.getElements();
-
-      // 3) initialize accordion behavior
       thisProduct.initAccordion();
-
-      // 4) set up order form listeners
       thisProduct.initOrderForm();
-
-      // 5) initialize amount widget
-      thisProduct.initAmountWidget();
-
-      // 6) initial price and images update
+      thisProduct.initAmountWidget(); // initialize AmountWidget
       thisProduct.processOrder();
     }
 
     renderInMenu() {
       const thisProduct = this;
-
-      // generate HTML from template
       const generatedHTML = templates.menuProduct(thisProduct.data);
-
-      // create DOM element
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
-
-      // find menu container
       const menuContainer = document.querySelector(select.containerOf.menu);
-
-      // append element to menu
       menuContainer.appendChild(thisProduct.element);
     }
 
     getElements() {
       const thisProduct = this;
 
-      // references to important DOM nodes
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -119,18 +99,14 @@
     initAccordion() {
       const thisProduct = this;
 
-      // toggle product visibility when clicking on header
       thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
-
         const activeProduct = document.querySelector(
           select.all.menuProductsActive
         );
-
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
-
         thisProduct.element.classList.toggle(
           classNames.menuProduct.wrapperActive
         );
@@ -140,20 +116,17 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // prevent page reload on form submit
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
-      // recalculate price on any input change
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
         });
       }
 
-      // recalculate price on "Add to cart" click
       thisProduct.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
@@ -162,43 +135,33 @@
 
     initAmountWidget() {
       const thisProduct = this;
-
-      // create AmountWidget instance
       thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);
     }
 
     processOrder() {
       const thisProduct = this;
-
-      // read form values into object
       const formData = utils.serializeFormToObject(thisProduct.form);
 
-      // start from default price
       let price = thisProduct.data.price;
 
-      // iterate over all product params
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // iterate over all options of a given param
         for (let optionId in param.options) {
           const option = param.options[optionId];
-
-          // check if option is selected
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          // modify price depending on selection
           if (optionSelected && !option.default) {
             price += option.price;
           } else if (!optionSelected && option.default) {
             price -= option.price;
           }
 
-          // toggle ingredient images
           const optionImage = thisProduct.imageWrapper.querySelector(
             '.' + paramId + '-' + optionId
           );
+
           if (optionImage) {
             if (optionSelected) {
               optionImage.classList.add(classNames.menuProduct.imageVisible);
@@ -209,7 +172,6 @@
         }
       }
 
-      // update DOM with new price
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -218,43 +180,60 @@
     constructor(element) {
       const thisWidget = this;
 
-      // get references to widget DOM elements
       thisWidget.getElements(element);
-
-      // set initial value from input
-      thisWidget.setValue(thisWidget.input.value);
+      thisWidget.setValue(thisWidget.input.value); // set initial value
+      thisWidget.initActions(); // set up listeners
     }
 
     getElements(element) {
       const thisWidget = this;
 
       thisWidget.element = element;
-      thisWidget.input = thisWidget.element.querySelector(
-        select.widgets.amount.input
-      );
-      thisWidget.linkDecrease = thisWidget.element.querySelector(
-        select.widgets.amount.linkDecrease
-      );
-      thisWidget.linkIncrease = thisWidget.element.querySelector(
-        select.widgets.amount.linkIncrease
-      );
+      thisWidget.input =
+        thisWidget.element.querySelector(select.widgets.amount.input);
+      thisWidget.linkDecrease =
+        thisWidget.element.querySelector(select.widgets.amount.linkDecrease);
+      thisWidget.linkIncrease =
+        thisWidget.element.querySelector(select.widgets.amount.linkIncrease);
     }
 
     setValue(value) {
       const thisWidget = this;
-
-      // convert to number
       const newValue = parseInt(value);
 
-      /* validation:
-         - must be a number (not NaN)
-         - must be different from current value */
-      if (thisWidget.value !== newValue && !isNaN(newValue)) {
+      // Validation: check if value is a number, different from current, and within range
+      if (
+        thisWidget.value !== newValue &&
+        !isNaN(newValue) &&
+        newValue >= settings.amountWidget.defaultMin &&
+        newValue <= settings.amountWidget.defaultMax
+      ) {
         thisWidget.value = newValue;
       }
 
-      // update input field (reverts to previous valid value if wrong input)
+      // Update input field with current value
       thisWidget.input.value = thisWidget.value;
+    }
+
+    initActions() {
+      const thisWidget = this;
+
+      // React to manual input change
+      thisWidget.input.addEventListener('change', function () {
+        thisWidget.setValue(thisWidget.input.value);
+      });
+
+      // React to clicking "decrease"
+      thisWidget.linkDecrease.addEventListener('click', function (event) {
+        event.preventDefault();
+        thisWidget.setValue(thisWidget.value - 1);
+      });
+
+      // React to clicking "increase"
+      thisWidget.linkIncrease.addEventListener('click', function (event) {
+        event.preventDefault();
+        thisWidget.setValue(thisWidget.value + 1);
+      });
     }
   }
 
@@ -281,6 +260,7 @@
 
   app.init();
 }
+
 
 
 
