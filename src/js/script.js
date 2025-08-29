@@ -61,45 +61,45 @@
       thisProduct.id = id;
       thisProduct.data = data;
 
-      // 1) render product HTML and insert into the DOM
+      // 1) render product and insert it into DOM
       thisProduct.renderInMenu();
 
-      // 2) cache frequently used DOM elements inside this instance
+      // 2) store frequently used DOM elements
       thisProduct.getElements();
 
-      // 3) set up accordion behavior
+      // 3) initialize accordion behavior
       thisProduct.initAccordion();
 
       // 4) set up order form listeners
       thisProduct.initOrderForm();
 
-      // 5) create and wire up amount widget
+      // 5) initialize amount widget
       thisProduct.initAmountWidget();
 
-      // 6) initial processing of order (price & images)
+      // 6) initial price and images update
       thisProduct.processOrder();
     }
 
     renderInMenu() {
       const thisProduct = this;
 
-      // Generate HTML code based on template
+      // generate HTML from template
       const generatedHTML = templates.menuProduct(thisProduct.data);
 
-      // Create DOM element from generated HTML
+      // create DOM element
       thisProduct.element = utils.createDOMFromHTML(generatedHTML);
 
-      // Find menu container on the page
+      // find menu container
       const menuContainer = document.querySelector(select.containerOf.menu);
 
-      // Append newly created element to menu container
+      // append element to menu
       menuContainer.appendChild(thisProduct.element);
     }
 
     getElements() {
       const thisProduct = this;
 
-      // Store references to important DOM nodes inside the product
+      // references to important DOM nodes
       thisProduct.accordionTrigger =
         thisProduct.element.querySelector(select.menuProduct.clickable);
       thisProduct.form =
@@ -119,21 +119,18 @@
     initAccordion() {
       const thisProduct = this;
 
-      // Listen for clicks on the product header
+      // toggle product visibility when clicking on header
       thisProduct.accordionTrigger.addEventListener('click', function (event) {
         event.preventDefault();
 
-        // Find currently active product (if any)
         const activeProduct = document.querySelector(
           select.all.menuProductsActive
         );
 
-        // If there is an active product and it's not this one, close it
         if (activeProduct && activeProduct !== thisProduct.element) {
           activeProduct.classList.remove(classNames.menuProduct.wrapperActive);
         }
 
-        // Toggle this product
         thisProduct.element.classList.toggle(
           classNames.menuProduct.wrapperActive
         );
@@ -143,20 +140,20 @@
     initOrderForm() {
       const thisProduct = this;
 
-      // Handle form submit (Enter key)
+      // prevent page reload on form submit
       thisProduct.form.addEventListener('submit', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
       });
 
-      // Handle any change in form inputs
+      // recalculate price on any input change
       for (let input of thisProduct.formInputs) {
         input.addEventListener('change', function () {
           thisProduct.processOrder();
         });
       }
 
-      // Handle "Add to cart" button click
+      // recalculate price on "Add to cart" click
       thisProduct.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder();
@@ -166,44 +163,42 @@
     initAmountWidget() {
       const thisProduct = this;
 
-      // create new AmountWidget instance and keep a reference to it
+      // create AmountWidget instance
       thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);
     }
 
     processOrder() {
       const thisProduct = this;
 
-      // Convert form data into an object
+      // read form values into object
       const formData = utils.serializeFormToObject(thisProduct.form);
 
-      // Start from base price
+      // start from default price
       let price = thisProduct.data.price;
 
-      // Iterate over all product parameters
+      // iterate over all product params
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Iterate over options within each parameter
+        // iterate over all options of a given param
         for (let optionId in param.options) {
           const option = param.options[optionId];
 
-          // Is this option selected in the form?
+          // check if option is selected
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          // Adjust price based on selection and defaults
+          // modify price depending on selection
           if (optionSelected && !option.default) {
             price += option.price;
           } else if (!optionSelected && option.default) {
             price -= option.price;
           }
 
-          // Find image representing this param-option pair
+          // toggle ingredient images
           const optionImage = thisProduct.imageWrapper.querySelector(
             '.' + paramId + '-' + optionId
           );
-
-          // Show/hide image based on selection
           if (optionImage) {
             if (optionSelected) {
               optionImage.classList.add(classNames.menuProduct.imageVisible);
@@ -214,7 +209,7 @@
         }
       }
 
-      // Update price in the DOM (note: quantity multiplication will come later)
+      // update DOM with new price
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -223,33 +218,43 @@
     constructor(element) {
       const thisWidget = this;
 
-      // Find and store widget elements
+      // get references to widget DOM elements
       thisWidget.getElements(element);
 
-      // Debug logs (możesz zakomentować, gdy przetestujesz)
-      console.log('AmountWidget:', thisWidget);
-      console.log('constructor arguments:', element);
+      // set initial value from input
+      thisWidget.setValue(thisWidget.input.value);
     }
 
-    // Find input and +/- controls inside the widget wrapper
     getElements(element) {
       const thisWidget = this;
 
-      // Save wrapper element
       thisWidget.element = element;
-
-      // Find input inside widget
       thisWidget.input = thisWidget.element.querySelector(
         select.widgets.amount.input
       );
-
-      // Find "decrease" and "increase" links
       thisWidget.linkDecrease = thisWidget.element.querySelector(
         select.widgets.amount.linkDecrease
       );
       thisWidget.linkIncrease = thisWidget.element.querySelector(
         select.widgets.amount.linkIncrease
       );
+    }
+
+    setValue(value) {
+      const thisWidget = this;
+
+      // convert to number
+      const newValue = parseInt(value);
+
+      /* validation:
+         - must be a number (not NaN)
+         - must be different from current value */
+      if (thisWidget.value !== newValue && !isNaN(newValue)) {
+        thisWidget.value = newValue;
+      }
+
+      // update input field (reverts to previous valid value if wrong input)
+      thisWidget.input.value = thisWidget.value;
     }
   }
 
@@ -276,6 +281,7 @@
 
   app.init();
 }
+
 
 
 
