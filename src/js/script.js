@@ -73,7 +73,7 @@
       // 4) form listeners
       thisProduct.initOrderForm();
 
-      // 5) init amount widget and react to its updates
+      // 5) init amount widget (and listen for its "updated" event)
       thisProduct.initAmountWidget();
 
       // 6) initial price computation
@@ -171,7 +171,7 @@
       // Create AmountWidget instance
       thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);
 
-      // Recalculate price whenever the widget announces an update
+      // Recalculate price whenever the widget announces an update (custom event)
       thisProduct.amountWidgetElem.addEventListener('updated', function () {
         thisProduct.processOrder();
       });
@@ -219,7 +219,10 @@
         }
       }
 
-      // Update price in the DOM (amount multiplication comes later)
+      // Multiply price by selected amount
+      price *= thisProduct.amountWidget.value;
+
+      // Update price in the DOM
       thisProduct.priceElem.innerHTML = price;
     }
   }
@@ -228,7 +231,7 @@
     constructor(element) {
       const thisWidget = this;
 
-      // Cache DOM nodes
+      // Cache DOM nodes and initial value
       thisWidget.getElements(element);
 
       // Initialize value from input
@@ -257,7 +260,7 @@
       const thisWidget = this;
       const newValue = parseInt(value);
 
-      // Validate: different, numeric and within allowed range
+      // Validate: different, numeric, and within allowed range
       if (
         thisWidget.value !== newValue &&
         !isNaN(newValue) &&
@@ -266,11 +269,15 @@
       ) {
         thisWidget.value = newValue;
 
-        // Announce the change only when the value is actually updated
+        // Reflect validated value in the input
+        thisWidget.input.value = thisWidget.value;
+
+        // Announce change (custom event)
         thisWidget.announce();
+        return; // stop here after successful update
       }
 
-      // Ensure the input shows the current (validated) value
+      // Keep input in sync even if value didn't change (e.g., reject invalid)
       thisWidget.input.value =
         typeof thisWidget.value === 'number'
           ? thisWidget.value
@@ -279,8 +286,7 @@
 
     announce() {
       const thisWidget = this;
-
-      // Emit a custom event that bubbles up
+      // Custom event informing Product that a valid value was set
       const event = new Event('updated', { bubbles: true });
       thisWidget.element.dispatchEvent(event);
     }
@@ -296,13 +302,21 @@
       // Decrease button
       thisWidget.linkDecrease.addEventListener('click', function (event) {
         event.preventDefault();
-        thisWidget.setValue(thisWidget.value - 1);
+        const current =
+          typeof thisWidget.value === 'number'
+            ? thisWidget.value
+            : settings.amountWidget.defaultValue;
+        thisWidget.setValue(current - 1);
       });
 
       // Increase button
       thisWidget.linkIncrease.addEventListener('click', function (event) {
         event.preventDefault();
-        thisWidget.setValue(thisWidget.value + 1);
+        const current =
+          typeof thisWidget.value === 'number'
+            ? thisWidget.value
+            : settings.amountWidget.defaultValue;
+        thisWidget.setValue(current + 1);
       });
     }
   }
@@ -330,6 +344,7 @@
 
   app.init();
 }
+
 
 
 
