@@ -26,7 +26,7 @@
     },
     widgets: {
       amount: {
-        input: 'input[name="amount"]',
+        input: 'input.amount',                 // <-- dopasowane do HTML
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -171,7 +171,7 @@
       // Create AmountWidget instance
       thisProduct.amountWidget = new AmountWidget(thisProduct.amountWidgetElem);
 
-      // Recalculate price whenever the widget announces an update (custom event)
+      // Recalculate price whenever the widget announces an update
       thisProduct.amountWidgetElem.addEventListener('updated', function () {
         thisProduct.processOrder();
       });
@@ -219,7 +219,7 @@
         }
       }
 
-      // Multiply price by selected amount
+      // Multiply price by amount
       price *= thisProduct.amountWidget.value;
 
       // Update price in the DOM
@@ -234,8 +234,12 @@
       // Cache DOM nodes and initial value
       thisWidget.getElements(element);
 
-      // Initialize value from input
-      thisWidget.setValue(thisWidget.input.value);
+      // Initialize value: use input value if present, otherwise fallback to default
+      if (thisWidget.input.value) {
+        thisWidget.setValue(thisWidget.input.value);
+      } else {
+        thisWidget.setValue(settings.amountWidget.defaultValue);
+      }
 
       // Wire up input and buttons
       thisWidget.initActions();
@@ -268,16 +272,10 @@
         newValue <= settings.amountWidget.defaultMax
       ) {
         thisWidget.value = newValue;
-
-        // Reflect validated value in the input
-        thisWidget.input.value = thisWidget.value;
-
-        // Announce change (custom event)
         thisWidget.announce();
-        return; // stop here after successful update
       }
 
-      // Keep input in sync even if value didn't change (e.g., reject invalid)
+      // Ensure input reflects the current (validated) value
       thisWidget.input.value =
         typeof thisWidget.value === 'number'
           ? thisWidget.value
@@ -286,8 +284,7 @@
 
     announce() {
       const thisWidget = this;
-      // Custom event informing Product that a valid value was set
-      const event = new Event('updated', { bubbles: true });
+      const event = new Event('updated');
       thisWidget.element.dispatchEvent(event);
     }
 
@@ -299,24 +296,24 @@
         thisWidget.setValue(thisWidget.input.value);
       });
 
-      // Decrease button
+      // Decrease button (bez operatora ??)
       thisWidget.linkDecrease.addEventListener('click', function (event) {
         event.preventDefault();
-        const current =
+        const base =
           typeof thisWidget.value === 'number'
             ? thisWidget.value
             : settings.amountWidget.defaultValue;
-        thisWidget.setValue(current - 1);
+        thisWidget.setValue(base - 1);
       });
 
-      // Increase button
+      // Increase button (bez operatora ??)
       thisWidget.linkIncrease.addEventListener('click', function (event) {
         event.preventDefault();
-        const current =
+        const base =
           typeof thisWidget.value === 'number'
             ? thisWidget.value
             : settings.amountWidget.defaultValue;
-        thisWidget.setValue(current + 1);
+        thisWidget.setValue(base + 1);
       });
     }
   }
@@ -344,6 +341,8 @@
 
   app.init();
 }
+
+
 
 
 
