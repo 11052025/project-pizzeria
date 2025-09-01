@@ -26,7 +26,7 @@
     },
     widgets: {
       amount: {
-        input: 'input[name="amount"]',
+        input: 'input.amount',                 // <-- dopasowane do HTML
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -296,20 +296,24 @@
         thisWidget.setValue(thisWidget.input.value);
       });
 
-      // Decrease button
+      // Decrease button (bez operatora ??)
       thisWidget.linkDecrease.addEventListener('click', function (event) {
         event.preventDefault();
-        thisWidget.setValue(
-          (thisWidget.value ?? settings.amountWidget.defaultValue) - 1
-        );
+        const base =
+          typeof thisWidget.value === 'number'
+            ? thisWidget.value
+            : settings.amountWidget.defaultValue;
+        thisWidget.setValue(base - 1);
       });
 
-      // Increase button
+      // Increase button (bez operatora ??)
       thisWidget.linkIncrease.addEventListener('click', function (event) {
         event.preventDefault();
-        thisWidget.setValue(
-          (thisWidget.value ?? settings.amountWidget.defaultValue) + 1
-        );
+        const base =
+          typeof thisWidget.value === 'number'
+            ? thisWidget.value
+            : settings.amountWidget.defaultValue;
+        thisWidget.setValue(base + 1);
       });
     }
   }
@@ -337,6 +341,7 @@
 
   app.init();
 }
+
 
 
 
