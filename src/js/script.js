@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount', // input has class="amount" now
+        input: 'input.amount',
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder(); // ensure priceSingle is fresh
-        thisProduct.addToCart(); // push to cart
+        thisProduct.processOrder();           // ensure priceSingle is fresh
+        thisProduct.addToCart();              // send prepared object to Cart
       });
     }
 
@@ -265,11 +265,11 @@
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
+    // Build a trimmed product summary object for the cart
     prepareCartProduct() {
       const thisProduct = this;
 
-      // Build object consumed by cart template
-      const productSummary = {
+      return {
         id: thisProduct.id,
         name: thisProduct.data.name,
         amount: thisProduct.amountWidget.value,
@@ -277,38 +277,32 @@
         price: thisProduct.priceSingle * thisProduct.amountWidget.value,
         params: thisProduct.prepareCartProductParams(),
       };
-
-      return productSummary;
     }
 
+    // Build params { [paramId]: { label, options: { [optionId]: optionLabel } } }
     prepareCartProductParams() {
       const thisProduct = this;
-
       const formData = utils.serializeFormToObject(thisProduct.dom.form);
       const params = {};
 
-      // Build params with labels for chosen options
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        params[paramId] = {
-          label: param.label,
-          options: {},
-        };
+        const paramSummary = { label: param.label, options: {} };
 
         for (let optionId in param.options) {
           const option = param.options[optionId];
-          const optionSelected =
+          const selected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          if (optionSelected) {
-            params[paramId].options[optionId] = option.label;
+          if (selected) {
+            paramSummary.options[optionId] = option.label;
           }
         }
 
-        // If nothing selected for this param, remove it from the summary
-        if (Object.keys(params[paramId].options).length === 0) {
-          delete params[paramId];
+        // Add only if there are any selected options
+        if (Object.keys(paramSummary.options).length) {
+          params[paramId] = paramSummary;
         }
       }
 
@@ -317,9 +311,8 @@
 
     addToCart() {
       const thisProduct = this;
-
-      // Send product summary to the cart instance
-      app.cart.add(thisProduct.prepareCartProduct());
+      const summary = thisProduct.prepareCartProduct();
+      app.cart.add(summary); // pass light-weight summary, not the whole instance
     }
   }
 
@@ -381,7 +374,7 @@
 
     announce() {
       const thisWidget = this;
-      const event = new Event('updated', { bubbles: true });
+      const event = new Event('updated');
       thisWidget.element.dispatchEvent(event);
     }
 
@@ -413,98 +406,7 @@
   }
 
   // =========================
-  // CartProduct (row in cart)
-  // =========================
-  class CartProduct {
-    constructor(element, data) {
-      const thisCartProduct = this;
-
-      // Keep original data
-      thisCartProduct.id = data.id;
-      thisCartProduct.name = data.name;
-      thisCartProduct.priceSingle = data.priceSingle;
-      thisCartProduct.amount = data.amount;
-      thisCartProduct.params = data.params;
-
-      // Cache DOM within this row
-      thisCartProduct.dom = {};
-      thisCartProduct.dom.wrapper = element;
-      thisCartProduct.dom.amountWidget = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.amountWidget
-      );
-      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.price
-      );
-      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.edit
-      );
-      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.remove
-      );
-
-      // Init amount widget inside cart row
-      thisCartProduct.amountWidget = new AmountWidget(
-        thisCartProduct.dom.amountWidget
-      );
-      thisCartProduct.dom.amountWidget.addEventListener('updated', () => {
-        thisCartProduct.amount = thisCartProduct.amountWidget.value;
-        thisCartProduct.update();
-      });
-
-      // Initial UI update
-      thisCartProduct.update();
-
-      // Bind remove/edit actions
-      thisCartProduct.initActions();
-    }
-
-    update() {
-      const thisCartProduct = this;
-
-      // Recompute row price and update DOM
-      thisCartProduct.price =
-        thisCartProduct.priceSingle * thisCartProduct.amount;
-      thisCartProduct.dom.price.textContent = thisCartProduct.price;
-    }
-
-    initActions() {
-      const thisCartProduct = this;
-
-      // Edit is not implemented here (prevent default)
-      thisCartProduct.dom.edit.addEventListener('click', function (e) {
-        e.preventDefault();
-      });
-
-      // Remove: dispatch custom event for Cart to catch
-      thisCartProduct.dom.remove.addEventListener('click', function (e) {
-        e.preventDefault();
-        const event = new CustomEvent('remove', {
-          bubbles: true,
-          detail: { cartProduct: thisCartProduct },
-        });
-        thisCartProduct.dom.wrapper.dispatchEvent(event);
-      });
-    }
-
-    remove() {
-      // Not used directly; Cart handles actual removal from DOM and array.
-    }
-
-    getData() {
-      const thisCartProduct = this;
-      return {
-        id: thisCartProduct.id,
-        amount: thisCartProduct.amount,
-        price: thisCartProduct.price,
-        priceSingle: thisCartProduct.priceSingle,
-        name: thisCartProduct.name,
-        params: thisCartProduct.params,
-      };
-    }
-  }
-
-  // =========================
-  // Cart
+  // Cart (show/hide + add)
   // =========================
   class Cart {
     constructor(element) {
@@ -526,21 +428,6 @@
       thisCart.dom.productList = thisCart.dom.wrapper.querySelector(
         select.cart.productList
       );
-
-      // Totals
-      thisCart.dom.totalNumber = thisCart.dom.wrapper.querySelector(
-        select.cart.totalNumber
-      );
-      thisCart.dom.subtotalPrice = thisCart.dom.wrapper.querySelector(
-        select.cart.subtotalPrice
-      );
-      thisCart.dom.deliveryFee = thisCart.dom.wrapper.querySelector(
-        select.cart.deliveryFee
-      );
-      // totalPrice is two places -> NodeList
-      thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(
-        select.cart.totalPrice
-      );
     }
 
     initActions() {
@@ -550,76 +437,24 @@
       thisCart.dom.toggleTrigger.addEventListener('click', function () {
         thisCart.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
       });
-
-      // React to row-level events
-      thisCart.dom.productList.addEventListener('updated', function () {
-        thisCart.update();
-      });
-
-      thisCart.dom.productList.addEventListener('remove', function (event) {
-        thisCart.remove(event.detail.cartProduct);
-      });
     }
 
-    add(cartProductData) {
+    // Render a cart row and store data
+    add(cartProduct) {
       const thisCart = this;
 
       // Render cart row from template
-      const generatedHTML = templates.cartProduct(cartProductData);
+      const generatedHTML = templates.cartProduct(cartProduct);
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
       // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Create row controller and store
-      const cartProduct = new CartProduct(generatedDOM, cartProductData);
+      // Keep product summary for future totals/updates
       thisCart.products.push(cartProduct);
 
-      // Recalculate totals
-      thisCart.update();
-    }
-
-    update() {
-      const thisCart = this;
-
-      // Compute subtotal and total items
-      let totalNumber = 0;
-      let subtotalPrice = 0;
-
-      for (const product of thisCart.products) {
-        totalNumber += product.amount;
-        subtotalPrice += product.price;
-      }
-
-      // Delivery fee only if there are products
-      let deliveryFee = 0;
-      if (totalNumber > 0) {
-        deliveryFee = settings.cart.defaultDeliveryFee;
-      }
-
-      const totalPrice = subtotalPrice + deliveryFee;
-
-      // Update DOM
-      thisCart.dom.totalNumber.textContent = totalNumber;
-      thisCart.dom.subtotalPrice.textContent = subtotalPrice;
-      thisCart.dom.deliveryFee.textContent = deliveryFee;
-      thisCart.dom.totalPrice.forEach((el) => (el.textContent = totalPrice));
-    }
-
-    remove(cartProduct) {
-      const thisCart = this;
-
-      // Remove from array
-      const index = thisCart.products.indexOf(cartProduct);
-      if (index !== -1) {
-        thisCart.products.splice(index, 1);
-      }
-
-      // Remove DOM
-      cartProduct.dom.wrapper.remove();
-
-      // Recalculate
-      thisCart.update();
+      // For now: log what got added (helps while building next steps)
+      // console.log('Cart.add -> stored:', cartProduct);
     }
   }
 
@@ -658,6 +493,8 @@
 
   app.init();
 }
+
+
 
 
 
