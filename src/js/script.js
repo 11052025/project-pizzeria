@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',
+        input: 'input.amount',                // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder();           // ensure priceSingle is fresh
-        thisProduct.addToCart();              // send prepared object to Cart
+        thisProduct.processOrder();    // ensure priceSingle is fresh
+        thisProduct.addToCart();       // push to cart
       });
     }
 
@@ -265,11 +265,11 @@
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
-    // Build a trimmed product summary object for the cart
+    // Build a compact object that the Cart can render/use
     prepareCartProduct() {
       const thisProduct = this;
 
-      return {
+      const productSummary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
         amount: thisProduct.amountWidget.value,
@@ -277,32 +277,38 @@
         price: thisProduct.priceSingle * thisProduct.amountWidget.value,
         params: thisProduct.prepareCartProductParams(),
       };
+
+      return productSummary;
     }
 
-    // Build params { [paramId]: { label, options: { [optionId]: optionLabel } } }
+    // Collect selected options (labels) grouped by param
     prepareCartProductParams() {
       const thisProduct = this;
+
       const formData = utils.serializeFormToObject(thisProduct.dom.form);
       const params = {};
 
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        const paramSummary = { label: param.label, options: {} };
+        params[paramId] = {
+          label: param.label,
+          options: {},
+        };
 
         for (let optionId in param.options) {
           const option = param.options[optionId];
-          const selected =
+          const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          if (selected) {
-            paramSummary.options[optionId] = option.label;
+          if (optionSelected) {
+            params[paramId].options[optionId] = option.label;
           }
         }
 
-        // Add only if there are any selected options
-        if (Object.keys(paramSummary.options).length) {
-          params[paramId] = paramSummary;
+        // Remove empty groups
+        if (Object.keys(params[paramId].options).length === 0) {
+          delete params[paramId];
         }
       }
 
@@ -311,8 +317,9 @@
 
     addToCart() {
       const thisProduct = this;
-      const summary = thisProduct.prepareCartProduct();
-      app.cart.add(summary); // pass light-weight summary, not the whole instance
+
+      // Pass summary object to the cart
+      app.cart.add(thisProduct.prepareCartProduct());
     }
   }
 
@@ -325,7 +332,7 @@
 
       thisWidget.getElements(element);
 
-      // Initialize starting value
+      // Initialize starting value (from input if present, otherwise settings default)
       if (thisWidget.input.value) {
         thisWidget.setValue(thisWidget.input.value);
       } else {
@@ -439,7 +446,6 @@
       });
     }
 
-    // Render a cart row and store data
     add(cartProduct) {
       const thisCart = this;
 
@@ -450,11 +456,8 @@
       // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Keep product summary for future totals/updates
+      // Store raw data (for totals/updates later)
       thisCart.products.push(cartProduct);
-
-      // For now: log what got added (helps while building next steps)
-      // console.log('Cart.add -> stored:', cartProduct);
     }
   }
 
@@ -493,6 +496,7 @@
 
   app.init();
 }
+
 
 
 
