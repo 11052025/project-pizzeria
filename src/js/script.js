@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',                // HTML uses class="amount"
+        input: 'input.amount',
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -275,7 +275,7 @@
         amount: thisProduct.amountWidget.value,
         priceSingle: thisProduct.priceSingle,
         price: thisProduct.priceSingle * thisProduct.amountWidget.value,
-        params: thisProduct.prepareCartProductParams(), // <-- use helper here
+        params: thisProduct.prepareCartProductParams(),
       };
 
       return productSummary;
@@ -291,6 +291,7 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
+        // Create category bucket
         params[paramId] = {
           label: param.label,
           options: {},
@@ -306,6 +307,7 @@
           }
         }
 
+        // Remove empty categories
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -412,7 +414,7 @@
   }
 
   // =========================
-  // Cart
+  // Cart (show/hide + add)
   // =========================
   class Cart {
     constructor(element) {
@@ -445,20 +447,46 @@
       });
     }
 
-    add(cartProduct) {
+    add(cartProductData) {
       const thisCart = this;
 
-      // Render cart row from template
-      const generatedHTML = templates.cartProduct(cartProduct);
+      // 1) Render cart row from template using product summary
+      const generatedHTML = templates.cartProduct(cartProductData);
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // Append to list
+      // 2) Append to list in the cart
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Keep raw data if needed later (totals/updating)
-      thisCart.products.push(cartProduct);
+      // 3) Create CartProduct instance to manage this row
+      const cartProduct = new CartProduct(cartProductData, generatedDOM);
 
-      console.log('adding product', cartProduct);
+      // 4) Keep instance for totals / future operations
+      thisCart.products.push(cartProduct);
+    }
+  }
+
+  // =========================
+  // CartProduct (single row in cart)
+  // =========================
+  class CartProduct {
+    constructor(menuProduct, element) {
+      // Store data describing the chosen product
+      this.id = menuProduct.id;
+      this.name = menuProduct.name;
+      this.amount = menuProduct.amount;
+      this.priceSingle = menuProduct.priceSingle;
+      this.price = menuProduct.price;
+      this.params = menuProduct.params;
+
+      // Store DOM element representing this row in the cart
+      this.dom = {};
+      this.dom.wrapper = element;
+
+      // NOTE: In next steps we will:
+      // - cache row sub-elements (amount widget, price, edit/remove buttons),
+      // - initialize internal AmountWidget,
+      // - wire events (edit/remove/quantity change),
+      // - update cart totals when needed.
     }
   }
 
@@ -497,6 +525,7 @@
 
   app.init();
 }
+
 
 
 
