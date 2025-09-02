@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',                // HTML uses class="amount"
+        input: 'input.amount', // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder();    // ensure priceSingle is fresh
-        thisProduct.addToCart();       // push to cart
+        thisProduct.processOrder(); // ensure priceSingle is fresh
+        thisProduct.addToCart(); // push to cart
       });
     }
 
@@ -258,33 +258,86 @@
       thisProduct.priceSingle = price;
 
       // Multiply by chosen amount
-      const amount = thisProduct.amountWidget.value;
+      const amount =
+        typeof thisProduct.amountWidget.value === 'number'
+          ? thisProduct.amountWidget.value
+          : settings.amountWidget.defaultValue;
       const total = price * amount;
 
       // Update DOM
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
+    // Build a compact summary object for the cart
     prepareCartProduct() {
       const thisProduct = this;
 
-      // Build minimal summary object for the cart
-      const productSummary = {
+      const summary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
-        amount: thisProduct.amountWidget.value,
+        amount:
+          typeof thisProduct.amountWidget.value === 'number'
+            ? thisProduct.amountWidget.value
+            : settings.amountWidget.defaultValue,
         priceSingle: thisProduct.priceSingle,
-        price: thisProduct.priceSingle * thisProduct.amountWidget.value,
-        params: {}, // will be filled later
+        price:
+          thisProduct.priceSingle *
+          (typeof thisProduct.amountWidget.value === 'number'
+            ? thisProduct.amountWidget.value
+            : settings.amountWidget.defaultValue),
+        params: thisProduct.prepareCartProductParams(),
       };
 
-      // Return the compact summary object
-      return productSummary;
+      return summary;
+    }
+
+    // Collect a summary of selected options for the cart
+    prepareCartProductParams() {
+      const thisProduct = this;
+
+      // Read current form selections
+      const formData = utils.serializeFormToObject(thisProduct.dom.form);
+
+      // Object we will return
+      const params = {};
+
+      // For every category (param)...
+      for (let paramId in thisProduct.data.params) {
+        const param = thisProduct.data.params[paramId];
+
+        // Prepare bucket for this category
+        const paramSummary = {
+          label: param.label,
+          options: {},
+        };
+
+        // For every option in this category...
+        for (let optionId in param.options) {
+          const option = param.options[optionId];
+
+          // Is this option currently selected?
+          const optionSelected =
+            formData[paramId] && formData[paramId].includes(optionId);
+
+          // If selected, record it using optionId -> option.label
+          if (optionSelected) {
+            paramSummary.options[optionId] = option.label;
+          }
+        }
+
+        // Only keep categories that have at least one selected option
+        if (Object.keys(paramSummary.options).length) {
+          params[paramId] = paramSummary;
+        }
+      }
+
+      return params;
     }
 
     addToCart() {
       const thisProduct = this;
-      // Send prepared summary to the cart instead of the whole instance
+
+      // Send product summary to the cart instance
       app.cart.add(thisProduct.prepareCartProduct());
     }
   }
@@ -422,10 +475,8 @@
       // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Keep raw data if needed later
+      // Keep raw data if needed later (totals/updating)
       thisCart.products.push(cartProduct);
-
-      console.log('adding product', cartProduct);
     }
   }
 
@@ -464,6 +515,7 @@
 
   app.init();
 }
+
 
 
 
