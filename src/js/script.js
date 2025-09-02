@@ -254,68 +254,37 @@
         }
       }
 
-      // Save price of a single item (after options) for cart usage
+      // Save price of a single item (after options)
       thisProduct.priceSingle = price;
 
       // Multiply by chosen amount
       const amount = thisProduct.amountWidget.value;
       const total = price * amount;
 
-      // Update DOM (final price)
+      // Update DOM
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
     prepareCartProduct() {
       const thisProduct = this;
 
-      // Build object consumed by cart template
+      // Build minimal summary object for the cart
       const productSummary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
         amount: thisProduct.amountWidget.value,
         priceSingle: thisProduct.priceSingle,
         price: thisProduct.priceSingle * thisProduct.amountWidget.value,
-        params: thisProduct.prepareCartProductParams(),
+        params: {}, // will be filled later
       };
 
+      // Return the compact summary object
       return productSummary;
-    }
-
-    prepareCartProductParams() {
-      const thisProduct = this;
-
-      const formData = utils.serializeFormToObject(thisProduct.dom.form);
-      const params = {};
-
-      // Build params with labels for chosen options only
-      for (let paramId in thisProduct.data.params) {
-        const param = thisProduct.data.params[paramId];
-
-        for (let optionId in param.options) {
-          const option = param.options[optionId];
-          const optionSelected =
-            formData[paramId] && formData[paramId].includes(optionId);
-
-          if (optionSelected) {
-            // Ensure param bucket exists
-            if (!params[paramId]) {
-              params[paramId] = {
-                label: param.label,
-                options: {},
-              };
-            }
-            params[paramId].options[optionId] = option.label;
-          }
-        }
-      }
-
-      return params;
     }
 
     addToCart() {
       const thisProduct = this;
-
-      // Send product summary to the cart instance
+      // Send prepared summary to the cart instead of the whole instance
       app.cart.add(thisProduct.prepareCartProduct());
     }
   }
@@ -329,7 +298,7 @@
 
       thisWidget.getElements(element);
 
-      // Initialize starting value (from input or default)
+      // Initialize starting value
       if (thisWidget.input.value) {
         thisWidget.setValue(thisWidget.input.value);
       } else {
@@ -385,12 +354,10 @@
     initActions() {
       const thisWidget = this;
 
-      // Manual input change
       thisWidget.input.addEventListener('change', function () {
         thisWidget.setValue(thisWidget.input.value);
       });
 
-      // Decrease
       thisWidget.linkDecrease.addEventListener('click', function (event) {
         event.preventDefault();
         const current =
@@ -400,7 +367,6 @@
         thisWidget.setValue(current - 1);
       });
 
-      // Increase
       thisWidget.linkIncrease.addEventListener('click', function (event) {
         event.preventDefault();
         const current =
@@ -456,8 +422,10 @@
       // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Keep raw data if needed later (totals/updating)
+      // Keep raw data if needed later
       thisCart.products.push(cartProduct);
+
+      console.log('adding product', cartProduct);
     }
   }
 
@@ -496,6 +464,7 @@
 
   app.init();
 }
+
 
 
 
