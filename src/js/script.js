@@ -30,7 +30,8 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',                // HTML uses class="amount"
+        // HTML uses class="amount" (not name="amount")
+        input: 'input.amount',
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -254,7 +255,7 @@
         }
       }
 
-      // Save price of a single item (after options)
+      // ✅ Save single item price for later use in cart (after options)
       thisProduct.priceSingle = price;
 
       // Multiply by chosen amount
@@ -265,23 +266,7 @@
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
-    // Build a compact object that the Cart can render/use
-    prepareCartProduct() {
-      const thisProduct = this;
-
-      const productSummary = {
-        id: thisProduct.id,
-        name: thisProduct.data.name,
-        amount: thisProduct.amountWidget.value,
-        priceSingle: thisProduct.priceSingle,
-        price: thisProduct.priceSingle * thisProduct.amountWidget.value,
-        params: thisProduct.prepareCartProductParams(),
-      };
-
-      return productSummary;
-    }
-
-    // Collect selected options (labels) grouped by param
+    // Build params object (labels for chosen options)
     prepareCartProductParams() {
       const thisProduct = this;
 
@@ -291,6 +276,7 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
+        // Create param group in summary
         params[paramId] = {
           label: param.label,
           options: {},
@@ -306,7 +292,7 @@
           }
         }
 
-        // Remove empty groups
+        // Remove empty param groups
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -315,10 +301,26 @@
       return params;
     }
 
+    // Build summary sent to Cart
+    prepareCartProduct() {
+      const thisProduct = this;
+
+      const productSummary = {
+        id: thisProduct.id,
+        name: thisProduct.data.name,
+        amount: thisProduct.amountWidget.value,
+        priceSingle: thisProduct.priceSingle, // single unit price
+        price: thisProduct.priceSingle * thisProduct.amountWidget.value, // total price
+        params: thisProduct.prepareCartProductParams(),
+      };
+
+      return productSummary;
+    }
+
     addToCart() {
       const thisProduct = this;
 
-      // Pass summary object to the cart
+      // Send product summary to the cart instance
       app.cart.add(thisProduct.prepareCartProduct());
     }
   }
@@ -332,7 +334,7 @@
 
       thisWidget.getElements(element);
 
-      // Initialize starting value (from input if present, otherwise settings default)
+      // Initialize starting value (from input or default)
       if (thisWidget.input.value) {
         thisWidget.setValue(thisWidget.input.value);
       } else {
@@ -456,7 +458,7 @@
       // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Store raw data (for totals/updates later)
+      // Keep raw data if needed later (totals/updating)
       thisCart.products.push(cartProduct);
     }
   }
@@ -496,6 +498,7 @@
 
   app.init();
 }
+
 
 
 
