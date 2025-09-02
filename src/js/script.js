@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount', // HTML uses class="amount"
+        input: 'input.amount',                // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder(); // ensure priceSingle is fresh
-        thisProduct.addToCart(); // push to cart
+        thisProduct.processOrder();    // ensure priceSingle is fresh
+        thisProduct.addToCart();       // push to cart
       });
     }
 
@@ -258,76 +258,56 @@
       thisProduct.priceSingle = price;
 
       // Multiply by chosen amount
-      const amount =
-        typeof thisProduct.amountWidget.value === 'number'
-          ? thisProduct.amountWidget.value
-          : settings.amountWidget.defaultValue;
+      const amount = thisProduct.amountWidget.value;
       const total = price * amount;
 
       // Update DOM
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
-    // Build a compact summary object for the cart
     prepareCartProduct() {
       const thisProduct = this;
 
-      const summary = {
+      // Build object consumed by cart template
+      const productSummary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
-        amount:
-          typeof thisProduct.amountWidget.value === 'number'
-            ? thisProduct.amountWidget.value
-            : settings.amountWidget.defaultValue,
+        amount: thisProduct.amountWidget.value,
         priceSingle: thisProduct.priceSingle,
-        price:
-          thisProduct.priceSingle *
-          (typeof thisProduct.amountWidget.value === 'number'
-            ? thisProduct.amountWidget.value
-            : settings.amountWidget.defaultValue),
-        params: thisProduct.prepareCartProductParams(),
+        price: thisProduct.priceSingle * thisProduct.amountWidget.value,
+        params: thisProduct.prepareCartProductParams(), // <-- use helper here
       };
 
-      return summary;
+      return productSummary;
     }
 
-    // Collect a summary of selected options for the cart
     prepareCartProductParams() {
       const thisProduct = this;
 
-      // Read current form selections
       const formData = utils.serializeFormToObject(thisProduct.dom.form);
-
-      // Object we will return
       const params = {};
 
-      // For every category (param)...
+      // Build params with labels for chosen options
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Prepare bucket for this category
-        const paramSummary = {
+        params[paramId] = {
           label: param.label,
           options: {},
         };
 
-        // For every option in this category...
         for (let optionId in param.options) {
           const option = param.options[optionId];
-
-          // Is this option currently selected?
           const optionSelected =
             formData[paramId] && formData[paramId].includes(optionId);
 
-          // If selected, record it using optionId -> option.label
           if (optionSelected) {
-            paramSummary.options[optionId] = option.label;
+            params[paramId].options[optionId] = option.label;
           }
         }
 
-        // Only keep categories that have at least one selected option
-        if (Object.keys(paramSummary.options).length) {
-          params[paramId] = paramSummary;
+        if (Object.keys(params[paramId].options).length === 0) {
+          delete params[paramId];
         }
       }
 
@@ -432,7 +412,7 @@
   }
 
   // =========================
-  // Cart (show/hide + add)
+  // Cart
   // =========================
   class Cart {
     constructor(element) {
@@ -477,6 +457,8 @@
 
       // Keep raw data if needed later (totals/updating)
       thisCart.products.push(cartProduct);
+
+      console.log('adding product', cartProduct);
     }
   }
 
@@ -515,6 +497,7 @@
 
   app.init();
 }
+
 
 
 
