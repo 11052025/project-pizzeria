@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',
+        input: 'input.amount',                // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -268,7 +268,7 @@
     prepareCartProduct() {
       const thisProduct = this;
 
-      // Build object consumed by cart template
+      // Build object consumed by cart
       const productSummary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
@@ -291,12 +291,13 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Create category bucket
+        // Create container for this param
         params[paramId] = {
           label: param.label,
           options: {},
         };
 
+        // Fill options that are selected
         for (let optionId in param.options) {
           const option = param.options[optionId];
           const optionSelected =
@@ -307,7 +308,7 @@
           }
         }
 
-        // Remove empty categories
+        // If no options selected for this param, remove it from summary
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -447,21 +448,24 @@
       });
     }
 
-    add(cartProductData) {
+    add(menuProduct) {
       const thisCart = this;
 
-      // 1) Render cart row from template using product summary
-      const generatedHTML = templates.cartProduct(cartProductData);
+      // 1) Generate HTML for a cart row
+      const generatedHTML = templates.cartProduct(menuProduct);
+
+      // 2) Create DOM element
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // 2) Append to list in the cart
+      // 3) Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // 3) Create CartProduct instance to manage this row
-      const cartProduct = new CartProduct(cartProductData, generatedDOM);
-
-      // 4) Keep instance for totals / future operations
+      // 4) Create CartProduct instance and store it
+      const cartProduct = new CartProduct(menuProduct, generatedDOM);
       thisCart.products.push(cartProduct);
+
+      // Debug current cart state
+      // console.log('thisCart.products', thisCart.products);
     }
   }
 
@@ -470,23 +474,30 @@
   // =========================
   class CartProduct {
     constructor(menuProduct, element) {
-      // Store data describing the chosen product
-      this.id = menuProduct.id;
-      this.name = menuProduct.name;
-      this.amount = menuProduct.amount;
-      this.priceSingle = menuProduct.priceSingle;
-      this.price = menuProduct.price;
-      this.params = menuProduct.params;
+      const thisCartProduct = this;
 
-      // Store DOM element representing this row in the cart
-      this.dom = {};
-      this.dom.wrapper = element;
+      // Copy essential properties from product summary
+      thisCartProduct.id = menuProduct.id;
+      thisCartProduct.name = menuProduct.name;
+      thisCartProduct.amount = menuProduct.amount;
+      thisCartProduct.price = menuProduct.price;
+      thisCartProduct.priceSingle = menuProduct.priceSingle;
+      thisCartProduct.params = menuProduct.params;
 
-      // NOTE: In next steps we will:
-      // - cache row sub-elements (amount widget, price, edit/remove buttons),
-      // - initialize internal AmountWidget,
-      // - wire events (edit/remove/quantity change),
-      // - update cart totals when needed.
+      // Cache DOM of this row
+      thisCartProduct.getElements(element);
+
+      // For now just verify creation
+      console.log('new CartProduct', thisCartProduct);
+    }
+
+    getElements(element) {
+      const thisCartProduct = this;
+
+      thisCartProduct.dom = {};
+      thisCartProduct.dom.wrapper = element;
+      // Further refs (amount widget, price, edit/remove) will be added later
+      // when we implement cart row interactions.
     }
   }
 
@@ -525,6 +536,7 @@
 
   app.init();
 }
+
 
 
 
