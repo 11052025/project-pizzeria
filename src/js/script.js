@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount',                // HTML uses class="amount"
+        input: 'input.amount', // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder();    // ensure priceSingle is fresh
-        thisProduct.addToCart();       // push to cart
+        thisProduct.processOrder(); // ensure priceSingle is fresh
+        thisProduct.addToCart(); // push to cart
       });
     }
 
@@ -254,14 +254,12 @@
         }
       }
 
-      // Save price of a single item (after options)
+      // Save single item price (after options)
       thisProduct.priceSingle = price;
 
-      // Multiply by chosen amount
+      // Multiply by chosen amount and update DOM
       const amount = thisProduct.amountWidget.value;
       const total = price * amount;
-
-      // Update DOM
       thisProduct.dom.priceElem.innerHTML = total;
     }
 
@@ -291,6 +289,7 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
+        // Start category bucket
         params[paramId] = {
           label: param.label,
           options: {},
@@ -306,7 +305,7 @@
           }
         }
 
-        // If nothing selected for this param, remove it from the summary
+        // Remove empty categories
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -317,8 +316,6 @@
 
     addToCart() {
       const thisProduct = this;
-
-      // Send product summary to the cart instance
       app.cart.add(thisProduct.prepareCartProduct());
     }
   }
@@ -413,7 +410,7 @@
   }
 
   // =========================
-  // Cart (show/hide + add + update totals)
+  // Cart (show/hide + add + totals)
   // =========================
   class Cart {
     constructor(element) {
@@ -435,6 +432,20 @@
       thisCart.dom.productList = thisCart.dom.wrapper.querySelector(
         select.cart.productList
       );
+
+      // Totals / summary DOM refs
+      thisCart.dom.deliveryFee = thisCart.dom.wrapper.querySelector(
+        select.cart.deliveryFee
+      );
+      thisCart.dom.subtotalPrice = thisCart.dom.wrapper.querySelector(
+        select.cart.subtotalPrice
+      );
+      thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(
+        select.cart.totalPrice
+      ); // NodeList (header + summary)
+      thisCart.dom.totalNumber = thisCart.dom.wrapper.querySelector(
+        select.cart.totalNumber
+      );
     }
 
     initActions() {
@@ -449,62 +460,61 @@
     add(menuProduct) {
       const thisCart = this;
 
-      // 1) Render cart row from template
+      // Render cart row from template
       const generatedHTML = templates.cartProduct(menuProduct);
-
-      // 2) Convert HTML string to DOM node
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // 3) Append to cart's product list
+      // Append to list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // 4) Create CartProduct instance and store it
+      // Create CartProduct instance and store it
       thisCart.products.push(new CartProduct(menuProduct, generatedDOM));
 
-      // 5) Recalculate cart totals after adding
+      // Recalculate totals after adding a product
       thisCart.update();
     }
 
     update() {
       const thisCart = this;
 
-      // Delivery fee configured in settings
+      // Fixed delivery fee from settings
       const deliveryFee = settings.cart.defaultDeliveryFee;
 
-      // Running totals
-      let totalNumber = 0;      // total amount of items
-      let subtotalPrice = 0;    // sum of product prices (without delivery)
+      // Aggregate numbers
+      let totalNumber = 0;
+      let subtotalPrice = 0;
 
-      // Sum over products currently in the cart
-      for (const cartProduct of thisCart.products) {
+      for (let cartProduct of thisCart.products) {
         totalNumber += cartProduct.amount;
         subtotalPrice += cartProduct.price;
       }
 
-      // Compute final total price (with delivery when there are items)
-      if (totalNumber > 0) {
-        thisCart.totalPrice = subtotalPrice + deliveryFee;
-      } else {
+      // Compute total price (include delivery only if there are products)
+      if (thisCart.products.length === 0) {
         thisCart.totalPrice = 0;
+        thisCart.dom.deliveryFee.innerHTML = 0;
+      } else {
+        thisCart.totalPrice = subtotalPrice + deliveryFee;
+        thisCart.dom.deliveryFee.innerHTML = deliveryFee;
       }
 
-      // Temporary console to verify results during this step
-      // (You can remove these logs once you confirm it's correct.)
-      console.log('[Cart.update] totalNumber:', totalNumber);
-      console.log('[Cart.update] subtotalPrice:', subtotalPrice);
-      console.log('[Cart.update] deliveryFee:', totalNumber > 0 ? deliveryFee : 0);
-      console.log('[Cart.update] totalPrice:', thisCart.totalPrice);
+      // Write values to DOM
+      thisCart.dom.subtotalPrice.innerHTML = subtotalPrice;
+      for (let totalElem of thisCart.dom.totalPrice) {
+        totalElem.innerHTML = thisCart.totalPrice;
+      }
+      thisCart.dom.totalNumber.innerHTML = totalNumber;
     }
   }
 
   // =========================
-  // CartProduct (single cart row)
+  // CartProduct (row in cart)
   // =========================
   class CartProduct {
     constructor(menuProduct, element) {
       const thisCartProduct = this;
 
-      // Copy essential data for convenience
+      // Copy product summary fields for convenience
       thisCartProduct.id = menuProduct.id;
       thisCartProduct.name = menuProduct.name;
       thisCartProduct.amount = menuProduct.amount;
@@ -512,8 +522,10 @@
       thisCartProduct.price = menuProduct.price;
       thisCartProduct.params = menuProduct.params;
 
-      // Cache DOM & init behaviors
+      // Cache DOM for this row
       thisCartProduct.getElements(element);
+
+      // Init amount widget for this row
       thisCartProduct.initAmountWidget();
     }
 
@@ -539,23 +551,17 @@
     initAmountWidget() {
       const thisCartProduct = this;
 
-      // Reuse the same widget on the cart row
       thisCartProduct.amountWidget = new AmountWidget(
         thisCartProduct.dom.amountWidget
       );
 
-      // React when quantity changes
+      // When amount changes, update own amount & price display
       thisCartProduct.dom.amountWidget.addEventListener('updated', function () {
-        // Update internal amount & price for this cart row
         thisCartProduct.amount = thisCartProduct.amountWidget.value;
         thisCartProduct.price =
           thisCartProduct.amount * thisCartProduct.priceSingle;
-
-        // Reflect new price in the row
         thisCartProduct.dom.price.innerHTML = thisCartProduct.price;
-
-        // NOTE: Updating cart totals when amount changes will be added
-        // in the next steps (we'll notify Cart to re-sum).
+        // Note: cart totals will be handled in a later step (cart will listen to row updates)
       });
     }
   }
@@ -595,6 +601,7 @@
 
   app.init();
 }
+
 
 
 
