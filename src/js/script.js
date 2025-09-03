@@ -291,7 +291,6 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // create container for this param
         params[paramId] = {
           label: param.label,
           options: {},
@@ -307,7 +306,7 @@
           }
         }
 
-        // prune empty param
+        // If nothing selected for this param, remove it from the summary
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -414,7 +413,7 @@
   }
 
   // =========================
-  // Cart (show/hide + add)
+  // Cart (show/hide + add + update totals)
   // =========================
   class Cart {
     constructor(element) {
@@ -459,13 +458,47 @@
       // 3) Append to cart's product list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // 4) Create CartProduct instance AND store it
+      // 4) Create CartProduct instance and store it
       thisCart.products.push(new CartProduct(menuProduct, generatedDOM));
+
+      // 5) Recalculate cart totals after adding
+      thisCart.update();
+    }
+
+    update() {
+      const thisCart = this;
+
+      // Delivery fee configured in settings
+      const deliveryFee = settings.cart.defaultDeliveryFee;
+
+      // Running totals
+      let totalNumber = 0;      // total amount of items
+      let subtotalPrice = 0;    // sum of product prices (without delivery)
+
+      // Sum over products currently in the cart
+      for (const cartProduct of thisCart.products) {
+        totalNumber += cartProduct.amount;
+        subtotalPrice += cartProduct.price;
+      }
+
+      // Compute final total price (with delivery when there are items)
+      if (totalNumber > 0) {
+        thisCart.totalPrice = subtotalPrice + deliveryFee;
+      } else {
+        thisCart.totalPrice = 0;
+      }
+
+      // Temporary console to verify results during this step
+      // (You can remove these logs once you confirm it's correct.)
+      console.log('[Cart.update] totalNumber:', totalNumber);
+      console.log('[Cart.update] subtotalPrice:', subtotalPrice);
+      console.log('[Cart.update] deliveryFee:', totalNumber > 0 ? deliveryFee : 0);
+      console.log('[Cart.update] totalPrice:', thisCart.totalPrice);
     }
   }
 
   // =========================
-  // CartProduct (single row in cart)
+  // CartProduct (single cart row)
   // =========================
   class CartProduct {
     constructor(menuProduct, element) {
@@ -479,12 +512,9 @@
       thisCartProduct.price = menuProduct.price;
       thisCartProduct.params = menuProduct.params;
 
-      // Cache DOM refs and init widget
+      // Cache DOM & init behaviors
       thisCartProduct.getElements(element);
       thisCartProduct.initAmountWidget();
-
-      // For debugging you can uncomment:
-      // console.log('new CartProduct', thisCartProduct);
     }
 
     getElements(element) {
@@ -509,22 +539,23 @@
     initAmountWidget() {
       const thisCartProduct = this;
 
-      // Reuse the same AmountWidget class for cart row
+      // Reuse the same widget on the cart row
       thisCartProduct.amountWidget = new AmountWidget(
         thisCartProduct.dom.amountWidget
       );
 
-      // Recalculate row when amount changes
+      // React when quantity changes
       thisCartProduct.dom.amountWidget.addEventListener('updated', function () {
-        // Update amount from widget
+        // Update internal amount & price for this cart row
         thisCartProduct.amount = thisCartProduct.amountWidget.value;
-
-        // Recompute total price for this row
         thisCartProduct.price =
-          thisCartProduct.priceSingle * thisCartProduct.amount;
+          thisCartProduct.amount * thisCartProduct.priceSingle;
 
-        // Reflect in DOM
+        // Reflect new price in the row
         thisCartProduct.dom.price.innerHTML = thisCartProduct.price;
+
+        // NOTE: Updating cart totals when amount changes will be added
+        // in the next steps (we'll notify Cart to re-sum).
       });
     }
   }
@@ -564,6 +595,7 @@
 
   app.init();
 }
+
 
 
 

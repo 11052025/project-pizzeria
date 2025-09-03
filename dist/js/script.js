@@ -30,7 +30,7 @@
     },
     widgets: {
       amount: {
-        input: 'input.amount', // input has class="amount" now
+        input: 'input.amount',                // HTML uses class="amount"
         linkDecrease: 'a[href="#less"]',
         linkIncrease: 'a[href="#more"]',
       },
@@ -193,8 +193,8 @@
       // Add to cart
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
-        thisProduct.processOrder(); // ensure priceSingle is fresh
-        thisProduct.addToCart(); // push to cart
+        thisProduct.processOrder();    // ensure priceSingle is fresh
+        thisProduct.addToCart();       // push to cart
       });
     }
 
@@ -291,11 +291,13 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
+        // Create category entry
         params[paramId] = {
           label: param.label,
           options: {},
         };
 
+        // For each option, include only selected ones
         for (let optionId in param.options) {
           const option = param.options[optionId];
           const optionSelected =
@@ -306,7 +308,7 @@
           }
         }
 
-        // If nothing selected for this param, remove it from the summary
+        // If no options selected, remove empty category
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -381,7 +383,7 @@
 
     announce() {
       const thisWidget = this;
-      const event = new Event('updated', { bubbles: true });
+      const event = new Event('updated');
       thisWidget.element.dispatchEvent(event);
     }
 
@@ -413,98 +415,7 @@
   }
 
   // =========================
-  // CartProduct (row in cart)
-  // =========================
-  class CartProduct {
-    constructor(element, data) {
-      const thisCartProduct = this;
-
-      // Keep original data
-      thisCartProduct.id = data.id;
-      thisCartProduct.name = data.name;
-      thisCartProduct.priceSingle = data.priceSingle;
-      thisCartProduct.amount = data.amount;
-      thisCartProduct.params = data.params;
-
-      // Cache DOM within this row
-      thisCartProduct.dom = {};
-      thisCartProduct.dom.wrapper = element;
-      thisCartProduct.dom.amountWidget = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.amountWidget
-      );
-      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.price
-      );
-      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.edit
-      );
-      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.remove
-      );
-
-      // Init amount widget inside cart row
-      thisCartProduct.amountWidget = new AmountWidget(
-        thisCartProduct.dom.amountWidget
-      );
-      thisCartProduct.dom.amountWidget.addEventListener('updated', () => {
-        thisCartProduct.amount = thisCartProduct.amountWidget.value;
-        thisCartProduct.update();
-      });
-
-      // Initial UI update
-      thisCartProduct.update();
-
-      // Bind remove/edit actions
-      thisCartProduct.initActions();
-    }
-
-    update() {
-      const thisCartProduct = this;
-
-      // Recompute row price and update DOM
-      thisCartProduct.price =
-        thisCartProduct.priceSingle * thisCartProduct.amount;
-      thisCartProduct.dom.price.textContent = thisCartProduct.price;
-    }
-
-    initActions() {
-      const thisCartProduct = this;
-
-      // Edit is not implemented here (prevent default)
-      thisCartProduct.dom.edit.addEventListener('click', function (e) {
-        e.preventDefault();
-      });
-
-      // Remove: dispatch custom event for Cart to catch
-      thisCartProduct.dom.remove.addEventListener('click', function (e) {
-        e.preventDefault();
-        const event = new CustomEvent('remove', {
-          bubbles: true,
-          detail: { cartProduct: thisCartProduct },
-        });
-        thisCartProduct.dom.wrapper.dispatchEvent(event);
-      });
-    }
-
-    remove() {
-      // Not used directly; Cart handles actual removal from DOM and array.
-    }
-
-    getData() {
-      const thisCartProduct = this;
-      return {
-        id: thisCartProduct.id,
-        amount: thisCartProduct.amount,
-        price: thisCartProduct.price,
-        priceSingle: thisCartProduct.priceSingle,
-        name: thisCartProduct.name,
-        params: thisCartProduct.params,
-      };
-    }
-  }
-
-  // =========================
-  // Cart
+  // Cart (show/hide + add)
   // =========================
   class Cart {
     constructor(element) {
@@ -526,21 +437,6 @@
       thisCart.dom.productList = thisCart.dom.wrapper.querySelector(
         select.cart.productList
       );
-
-      // Totals
-      thisCart.dom.totalNumber = thisCart.dom.wrapper.querySelector(
-        select.cart.totalNumber
-      );
-      thisCart.dom.subtotalPrice = thisCart.dom.wrapper.querySelector(
-        select.cart.subtotalPrice
-      );
-      thisCart.dom.deliveryFee = thisCart.dom.wrapper.querySelector(
-        select.cart.deliveryFee
-      );
-      // totalPrice is two places -> NodeList
-      thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(
-        select.cart.totalPrice
-      );
     }
 
     initActions() {
@@ -550,76 +446,68 @@
       thisCart.dom.toggleTrigger.addEventListener('click', function () {
         thisCart.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
       });
-
-      // React to row-level events
-      thisCart.dom.productList.addEventListener('updated', function () {
-        thisCart.update();
-      });
-
-      thisCart.dom.productList.addEventListener('remove', function (event) {
-        thisCart.remove(event.detail.cartProduct);
-      });
     }
 
-    add(cartProductData) {
+    add(menuProduct) {
       const thisCart = this;
 
-      // Render cart row from template
-      const generatedHTML = templates.cartProduct(cartProductData);
+      // 1) Render cart row from template
+      const generatedHTML = templates.cartProduct(menuProduct);
+
+      // 2) Convert HTML string to DOM node
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // Append to list
+      // 3) Append to cart's product list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // Create row controller and store
-      const cartProduct = new CartProduct(generatedDOM, cartProductData);
+      // 4) Create CartProduct instance to manage this row
+      const cartProduct = new CartProduct(menuProduct, generatedDOM);
+
+      // 5) Keep reference to manage totals/updates later
       thisCart.products.push(cartProduct);
+    }
+  }
 
-      // Recalculate totals
-      thisCart.update();
+  // =========================
+  // CartProduct (single row in cart)
+  // =========================
+  class CartProduct {
+    constructor(menuProduct, element) {
+      const thisCartProduct = this;
+
+      // Copy essential data from summary object for convenience
+      thisCartProduct.id = menuProduct.id;
+      thisCartProduct.name = menuProduct.name;
+      thisCartProduct.amount = menuProduct.amount;
+      thisCartProduct.priceSingle = menuProduct.priceSingle;
+      thisCartProduct.price = menuProduct.price;
+      thisCartProduct.params = menuProduct.params;
+
+      // Cache DOM elements inside the cart row
+      thisCartProduct.getElements(element);
+
+      // Debug: show instance in console
+      console.log('new CartProduct', thisCartProduct);
     }
 
-    update() {
-      const thisCart = this;
+    getElements(element) {
+      const thisCartProduct = this;
 
-      // Compute subtotal and total items
-      let totalNumber = 0;
-      let subtotalPrice = 0;
-
-      for (const product of thisCart.products) {
-        totalNumber += product.amount;
-        subtotalPrice += product.price;
-      }
-
-      // Delivery fee only if there are products
-      let deliveryFee = 0;
-      if (totalNumber > 0) {
-        deliveryFee = settings.cart.defaultDeliveryFee;
-      }
-
-      const totalPrice = subtotalPrice + deliveryFee;
-
-      // Update DOM
-      thisCart.dom.totalNumber.textContent = totalNumber;
-      thisCart.dom.subtotalPrice.textContent = subtotalPrice;
-      thisCart.dom.deliveryFee.textContent = deliveryFee;
-      thisCart.dom.totalPrice.forEach((el) => (el.textContent = totalPrice));
-    }
-
-    remove(cartProduct) {
-      const thisCart = this;
-
-      // Remove from array
-      const index = thisCart.products.indexOf(cartProduct);
-      if (index !== -1) {
-        thisCart.products.splice(index, 1);
-      }
-
-      // Remove DOM
-      cartProduct.dom.wrapper.remove();
-
-      // Recalculate
-      thisCart.update();
+      // Group DOM refs for this cart row
+      thisCartProduct.dom = {};
+      thisCartProduct.dom.wrapper = element;
+      thisCartProduct.dom.amountWidget = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.amountWidget
+      );
+      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.price
+      );
+      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.edit
+      );
+      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.remove
+      );
     }
   }
 
@@ -658,6 +546,17 @@
 
   app.init();
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
