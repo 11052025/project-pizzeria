@@ -268,7 +268,7 @@
     prepareCartProduct() {
       const thisProduct = this;
 
-      // Build object consumed by cart
+      // Build object consumed by cart template
       const productSummary = {
         id: thisProduct.id,
         name: thisProduct.data.name,
@@ -291,13 +291,13 @@
       for (let paramId in thisProduct.data.params) {
         const param = thisProduct.data.params[paramId];
 
-        // Create container for this param
+        // Create category entry
         params[paramId] = {
           label: param.label,
           options: {},
         };
 
-        // Fill options that are selected
+        // For each option, include only selected ones
         for (let optionId in param.options) {
           const option = param.options[optionId];
           const optionSelected =
@@ -308,7 +308,7 @@
           }
         }
 
-        // If no options selected for this param, remove it from summary
+        // If no options selected, remove empty category
         if (Object.keys(params[paramId].options).length === 0) {
           delete params[paramId];
         }
@@ -451,21 +451,20 @@
     add(menuProduct) {
       const thisCart = this;
 
-      // 1) Generate HTML for a cart row
+      // 1) Render cart row from template
       const generatedHTML = templates.cartProduct(menuProduct);
 
-      // 2) Create DOM element
+      // 2) Convert HTML string to DOM node
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // 3) Append to list
+      // 3) Append to cart's product list
       thisCart.dom.productList.appendChild(generatedDOM);
 
-      // 4) Create CartProduct instance and store it
+      // 4) Create CartProduct instance to manage this row
       const cartProduct = new CartProduct(menuProduct, generatedDOM);
-      thisCart.products.push(cartProduct);
 
-      // Debug current cart state
-      // console.log('thisCart.products', thisCart.products);
+      // 5) Keep reference to manage totals/updates later
+      thisCart.products.push(cartProduct);
     }
   }
 
@@ -476,28 +475,39 @@
     constructor(menuProduct, element) {
       const thisCartProduct = this;
 
-      // Copy essential properties from product summary
+      // Copy essential data from summary object for convenience
       thisCartProduct.id = menuProduct.id;
       thisCartProduct.name = menuProduct.name;
       thisCartProduct.amount = menuProduct.amount;
-      thisCartProduct.price = menuProduct.price;
       thisCartProduct.priceSingle = menuProduct.priceSingle;
+      thisCartProduct.price = menuProduct.price;
       thisCartProduct.params = menuProduct.params;
 
-      // Cache DOM of this row
+      // Cache DOM elements inside the cart row
       thisCartProduct.getElements(element);
 
-      // For now just verify creation
+      // Debug: show instance in console
       console.log('new CartProduct', thisCartProduct);
     }
 
     getElements(element) {
       const thisCartProduct = this;
 
+      // Group DOM refs for this cart row
       thisCartProduct.dom = {};
       thisCartProduct.dom.wrapper = element;
-      // Further refs (amount widget, price, edit/remove) will be added later
-      // when we implement cart row interactions.
+      thisCartProduct.dom.amountWidget = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.amountWidget
+      );
+      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.price
+      );
+      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.edit
+      );
+      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(
+        select.cartProduct.remove
+      );
     }
   }
 
@@ -536,6 +546,7 @@
 
   app.init();
 }
+
 
 
 
