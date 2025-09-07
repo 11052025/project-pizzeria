@@ -75,7 +75,7 @@
     cart: {
       defaultDeliveryFee: 20,
     },
-    // === API configuration ===
+    // API configuration
     db: {
       url: '//localhost:3131',
       products: 'products',
@@ -200,7 +200,7 @@
       thisProduct.dom.cartButton.addEventListener('click', function (event) {
         event.preventDefault();
         thisProduct.processOrder(); // ensure priceSingle is fresh
-        thisProduct.addToCart(); // push to cart
+        thisProduct.addToCart(); // now emits event
       });
     }
 
@@ -283,7 +283,7 @@
           ? thisProduct.amountWidget.value
           : settings.amountWidget.defaultValue;
 
-      const productSummary = {
+      return {
         id: thisProduct.id,
         name: thisProduct.data.name,
         amount: amount,
@@ -291,8 +291,6 @@
         price: thisProduct.priceSingle * amount,
         params: thisProduct.prepareCartProductParams(),
       };
-
-      return productSummary;
     }
 
     prepareCartProductParams() {
@@ -330,11 +328,17 @@
       return params;
     }
 
+    // === CHANGED: emit event instead of calling cart directly ===
     addToCart() {
       const thisProduct = this;
 
-      // Send product summary to the cart instance
-      window.app.cart.add(thisProduct.prepareCartProduct());
+      const event = new CustomEvent('add-to-cart', {
+        bubbles: true,
+        detail: {
+          product: thisProduct.prepareCartProduct(),
+        },
+      });
+      thisProduct.dom.wrapper.dispatchEvent(event);
     }
   }
 
@@ -445,80 +449,70 @@
 
       thisCart.dom = {};
       thisCart.dom.wrapper = element;
-
-      // Toggle & list
       thisCart.dom.toggleTrigger = thisCart.dom.wrapper.querySelector(
         select.cart.toggleTrigger
       );
       thisCart.dom.productList = thisCart.dom.wrapper.querySelector(
         select.cart.productList
       );
-
-      // Form + inputs
-      thisCart.dom.form = thisCart.dom.wrapper.querySelector(select.cart.form);
-      thisCart.dom.address = thisCart.dom.wrapper.querySelector(
-        select.cart.address
-      );
-      thisCart.dom.phone = thisCart.dom.wrapper.querySelector(
-        select.cart.phone
-      );
-
-      // Totals
       thisCart.dom.deliveryFee = thisCart.dom.wrapper.querySelector(
         select.cart.deliveryFee
       );
       thisCart.dom.subtotalPrice = thisCart.dom.wrapper.querySelector(
         select.cart.subtotalPrice
       );
-      thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(
-        select.cart.totalPrice
-      );
       thisCart.dom.totalNumber = thisCart.dom.wrapper.querySelector(
         select.cart.totalNumber
       );
+      thisCart.dom.totalPrice = thisCart.dom.wrapper.querySelectorAll(
+        select.cart.totalPrice
+      );
+
+      // (optional) form refs if you're sending orders later:
+      thisCart.dom.form = thisCart.dom.wrapper.querySelector(select.cart.form);
+      thisCart.dom.address =
+        thisCart.dom.wrapper.querySelector(select.cart.address) ||
+        thisCart.dom.wrapper.querySelector(select.cart.phone) /* fallback */;
+      thisCart.dom.phone =
+        thisCart.dom.wrapper.querySelector(select.cart.phone) ||
+        thisCart.dom.wrapper.querySelector(select.cart.address) /* fallback */;
     }
 
     initActions() {
       const thisCart = this;
 
-      // Show/hide cart
+      // Show/hide cart panel
       thisCart.dom.toggleTrigger.addEventListener('click', function () {
         thisCart.dom.wrapper.classList.toggle(classNames.cart.wrapperActive);
       });
 
-      // Update totals on product amount change (bubbling event)
+      // Recalculate totals when any product amount changes (event bubbles)
       thisCart.dom.productList.addEventListener('updated', function () {
         thisCart.update();
       });
 
-      // Remove product
+      // React to remove requests from CartProduct instances
       thisCart.dom.productList.addEventListener('remove', function (event) {
         thisCart.remove(event.detail.cartProduct);
-      });
-
-      // Handle submit
-      thisCart.dom.form.addEventListener('submit', function (event) {
-        event.preventDefault();
-        thisCart.sendOrder();
       });
     }
 
     add(menuProduct) {
       const thisCart = this;
 
-      // 1) Render cart row
+      // 1) Render cart row from template
       const generatedHTML = templates.cartProduct(menuProduct);
 
-      // 2) Convert to DOM
+      // 2) Convert HTML string to DOM node
       const generatedDOM = utils.createDOMFromHTML(generatedHTML);
 
-      // 3) Append
+      // 3) Append to cart's product list
       thisCart.dom.productList.appendChild(generatedDOM);
 
       // 4) Create CartProduct instance and store it
       thisCart.products.push(new CartProduct(menuProduct, generatedDOM));
 
-      // 5) Update totals
+      // 5) Update cart totals
       thisCart.update();
     }
 
@@ -529,82 +523,47 @@
       let totalNumber = 0;
       let subtotalPrice = 0;
 
-      for (let product of thisCart.products) {
-        totalNumber += product.amount;
-        subtotalPrice += product.price;
+      // Sum amounts & prices from products
+      for (let cartProduct of thisCart.products) {
+        totalNumber += cartProduct.amount;
+        subtotalPrice += cartProduct.price;
       }
 
-      let totalPrice = 0;
-      let shownDelivery = 0;
-
-      if (totalNumber > 0) {
-        totalPrice = subtotalPrice + deliveryFee;
-        shownDelivery = deliveryFee;
+      // Compute totalPrice (no delivery when empty cart)
+      if (thisCart.products.length === 0) {
+        thisCart.totalPrice = 0;
+      } else {
+        thisCart.totalPrice = subtotalPrice + deliveryFee;
       }
 
-      // Save as properties (used in sendOrder)
-      thisCart.totalNumber = totalNumber;
-      thisCart.subtotalPrice = subtotalPrice;
-      thisCart.totalPrice = totalPrice;
-
-      // Update DOM
+      // Update DOM numbers
       thisCart.dom.totalNumber.innerHTML = totalNumber;
       thisCart.dom.subtotalPrice.innerHTML = subtotalPrice;
-      thisCart.dom.deliveryFee.innerHTML = shownDelivery;
+
+      // Delivery fee shown as 0 when cart empty
+      thisCart.dom.deliveryFee.innerHTML =
+        thisCart.products.length === 0 ? 0 : deliveryFee;
+
+      // total price appears in two places
       for (let elem of thisCart.dom.totalPrice) {
-        elem.innerHTML = totalPrice;
+        elem.innerHTML = thisCart.totalPrice;
       }
     }
 
-    remove(cartProduct) {
+    remove(cartProductInstance) {
       const thisCart = this;
 
-      // Remove DOM
-      cartProduct.dom.wrapper.remove();
+      // 1) Remove DOM
+      cartProductInstance.dom.wrapper.remove();
 
-      // Remove from internal array
-      const index = thisCart.products.indexOf(cartProduct);
+      // 2) Remove from internal array
+      const index = thisCart.products.indexOf(cartProductInstance);
       if (index !== -1) {
         thisCart.products.splice(index, 1);
       }
 
-      // Recompute totals
+      // 3) Recompute totals
       thisCart.update();
-    }
-
-    sendOrder() {
-      const thisCart = this;
-
-      const url = settings.db.url + '/' + settings.db.orders;
-
-      const payload = {
-        address: thisCart.dom.address.value,
-        phone: thisCart.dom.phone.value,
-        totalPrice: thisCart.totalPrice,
-        subtotalPrice: thisCart.subtotalPrice,
-        totalNumber: thisCart.totalNumber,
-        deliveryFee:
-          thisCart.totalNumber > 0 ? settings.cart.defaultDeliveryFee : 0,
-        products: [],
-      };
-
-      for (let prod of thisCart.products) {
-        payload.products.push(prod.getData());
-      }
-
-      const options = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      };
-
-      fetch(url, options)
-        .then((response) => response.json())
-        .then((parsedResponse) => {
-          console.log('Order sent', parsedResponse);
-        });
     }
   }
 
@@ -615,6 +574,7 @@
     constructor(menuProduct, element) {
       const thisCartProduct = this;
 
+      // Copy essential data for convenience
       thisCartProduct.id = menuProduct.id;
       thisCartProduct.name = menuProduct.name;
       thisCartProduct.amount = menuProduct.amount;
@@ -633,18 +593,13 @@
       thisCartProduct.dom = {};
       thisCartProduct.dom.wrapper = element;
       thisCartProduct.dom.amountWidget =
-        thisCartProduct.dom.wrapper.querySelector(
-          select.cartProduct.amountWidget
-        );
-      thisCartProduct.dom.price = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.price
-      );
-      thisCartProduct.dom.edit = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.edit
-      );
-      thisCartProduct.dom.remove = thisCartProduct.dom.wrapper.querySelector(
-        select.cartProduct.remove
-      );
+        thisCartProduct.dom.wrapper.querySelector(select.cartProduct.amountWidget);
+      thisCartProduct.dom.price =
+        thisCartProduct.dom.wrapper.querySelector(select.cartProduct.price);
+      thisCartProduct.dom.edit =
+        thisCartProduct.dom.wrapper.querySelector(select.cartProduct.edit);
+      thisCartProduct.dom.remove =
+        thisCartProduct.dom.wrapper.querySelector(select.cartProduct.remove);
     }
 
     initAmountWidget() {
@@ -654,30 +609,34 @@
         thisCartProduct.dom.amountWidget
       );
 
-      thisCartProduct.dom.amountWidget.addEventListener(
-        'updated',
-        function () {
-          thisCartProduct.amount = thisCartProduct.amountWidget.value;
-          thisCartProduct.price =
-            thisCartProduct.priceSingle * thisCartProduct.amount;
+      thisCartProduct.dom.amountWidget.addEventListener('updated', function () {
+        // Update amount & price for this cart row
+        const currentAmount =
+          typeof thisCartProduct.amountWidget.value === 'number'
+            ? thisCartProduct.amountWidget.value
+            : settings.amountWidget.defaultValue;
 
-          // Reflect in DOM
-          thisCartProduct.dom.price.innerHTML = thisCartProduct.price;
+        thisCartProduct.amount = currentAmount;
+        thisCartProduct.price = thisCartProduct.priceSingle * currentAmount;
 
-          // Bubble up so Cart.update() recalculates totals
-          const event = new CustomEvent('updated', { bubbles: true });
-          thisCartProduct.dom.wrapper.dispatchEvent(event);
-        }
-      );
+        // Reflect in DOM
+        thisCartProduct.dom.price.innerHTML = thisCartProduct.price;
+
+        // Let Cart know something changed (bubbles up)
+        const event = new CustomEvent('updated', { bubbles: true });
+        thisCartProduct.dom.wrapper.dispatchEvent(event);
+      });
     }
 
     initActions() {
       const thisCartProduct = this;
 
+      // (Edit button reserved for future use)
       thisCartProduct.dom.edit.addEventListener('click', function (event) {
         event.preventDefault();
       });
 
+      // Remove this product from cart
       thisCartProduct.dom.remove.addEventListener('click', function (event) {
         event.preventDefault();
         thisCartProduct.remove();
@@ -686,7 +645,7 @@
 
     remove() {
       const thisCartProduct = this;
-
+      // Emit custom "remove" event with reference to this instance
       const event = new CustomEvent('remove', {
         bubbles: true,
         detail: {
@@ -694,19 +653,6 @@
         },
       });
       thisCartProduct.dom.wrapper.dispatchEvent(event);
-    }
-
-    getData() {
-      const thisCartProduct = this;
-
-      return {
-        id: thisCartProduct.id,
-        name: thisCartProduct.name,
-        amount: thisCartProduct.amount,
-        priceSingle: thisCartProduct.priceSingle,
-        price: thisCartProduct.price,
-        params: thisCartProduct.params,
-      };
     }
   }
 
@@ -754,6 +700,14 @@
 
       const cartElem = document.querySelector(select.containerOf.cart);
       thisApp.cart = new Cart(cartElem);
+
+      // === NEW: listen for "add-to-cart" bubbling from products ===
+      const menuContainer = document.querySelector(select.containerOf.menu);
+      menuContainer.addEventListener('add-to-cart', function (event) {
+        const product = event.detail.product;
+        console.log('[add-to-cart] received:', product); // DEBUG: visible in Console
+        thisApp.cart.add(product);
+      });
     },
 
     init: function () {
@@ -764,11 +718,12 @@
     },
   };
 
-  // Expose app to window for Product.addToCart()
+  // Expose app to window (optional)
   window.app = app;
 
   app.init();
 }
+
 
 
 
